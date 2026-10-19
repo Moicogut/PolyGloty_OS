@@ -106,10 +106,14 @@ Documento de memoria técnica, decisiones arquitectónicas, estado actual del si
     - Botón de micrófono central de gran tamaño con pulso de grabación.
     - Selector rápido de idioma de voz (`🗣️ EN` / `🗣️ ES` / `🗣️ ZH`) para evitar que el motor de voz transcriba fonéticamente español en inglés.
     - Subtítulos de traducción rápidos (`🌐 ES`) y campo de texto fluido.
-- **Corrección de Reconocimiento de Voz**:
-  - Reinicio estricto de buffers en `onstart` (evitando concatenaciones corruptas de turnos previos).
-  - Transcripción reactiva interim en vivo dentro del input.
-  - Manejo defensivo de errores `not-allowed` y `no-speech`.
+- **Corrección de Conexión (Botón Empezar)**:
+  - Se eliminó la referencia huerfana a `$("#mute")` en `connect()` que provocaba `TypeError: Cannot set properties of null (setting 'disabled')` e impedía el inicio de sesión.
+  - Todas las asignaciones al DOM en `connect()` y `hangup()` ahora son 100% defensivas con validación de existencia previa.
+- **Distribución Móvil Despejada**:
+  - Reestructuración de `.tutor-hero` con contenedores elásticos (`.tutor-header-left` y `.tutor-header-actions`), evitando que el título *Alex · Tutor de Inglés* se fragmente en 4 líneas verticales.
+  - Ocultamiento de la micro-barra de progreso en móviles para dar respiración a *Nv 1* y *0 XP*.
+  - `padding-bottom: 96px` en `body` para garantizar que el dock de voz y entrada no colisione con el `bottom-nav`.
+
 - **Limpieza de Síntesis Auditiva**:
   - Función `cleanTextForSpeech` que elimina pinyin entre paréntesis `(Nǐ hǎo...)`, markdown y caracteres especiales para evitar lecturas deletreadas o robóticas.
   - Carga asíncrona de voces del sistema con filtro de calidad preferente (`natural`, `online`, `google`).

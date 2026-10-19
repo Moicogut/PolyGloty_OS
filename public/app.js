@@ -430,10 +430,10 @@ function applyFx(fx) {
 }
 
 async function connect() {
-  $("#connect").disabled = true;
+  if ($("#connect")) $("#connect").disabled = true;
   done.clear();
   renderObjectives();
-  $("#chat").replaceChildren();
+  if ($("#chat")) $("#chat").replaceChildren();
   status("Conectando con el tutor…");
 
   try {
