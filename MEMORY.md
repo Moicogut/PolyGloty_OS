@@ -77,23 +77,29 @@ Documento de memoria técnica, decisiones arquitectónicas, estado actual del si
 
 - **URL de Producción (HTTPS)**: [https://polyglot-voice-jtu6.onrender.com](https://polyglot-voice-jtu6.onrender.com)
 - **Repositorio Remoto**: [https://github.com/Moicogut/PolyGloty_OS.git](https://github.com/Moicogut/PolyGloty_OS.git)
-- **Servicio Render**: `polyglot-voice` (Blueprint en ejecución en región Oregon).
-- **Proyecto Supabase**: `https://jszkayddqctusgmcwyzi.supabase.co` (`PolyGloty_OS`)
+- **Servicio Render**: `polyglot-voice` (Estado: `Live`, Node 20.12.0 en Oregon).
+- **Base de Datos Cloud**: Supabase `https://jszkayddqctusgmcwyzi.supabase.co` (`PolyGloty_OS`).
+- **Migración SQL Ejecutada**: Tablas `profiles`, `cards`, `competencies`, `conversations`, `session_vocab` y políticas RLS habilitadas.
+- **Variables de Entorno Cargadas en Render**: `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`.
 
 ---
 
-## 6. Tareas Pendientes para Completar la Integración Cloud
+## 6. Pruebas de Humo en Producción (Smoke Tests Validados)
 
-1. **Configurar Variables de Entorno en Render**:
-   - En Render Dashboard (`polyglot-voice` -> **Environment**):
-     - `GEMINI_API_KEY`: Clave de API de Google Gemini (imprescindible para conversación en vivo con Alex y Mei).
-     - `SUPABASE_URL`: `https://jszkayddqctusgmcwyzi.supabase.co`
-     - `SUPABASE_KEY`: Clave `Publishable key` (`sb_publishable_...`) copiada desde el panel de Supabase.
+| Prueba | Endpoint | Resultado | Detalle |
+|---|---|---|---|
+| **Disponibilidad Web** | `GET /` | ✅ 200 OK | Carga HTML, CSS, Web Workers y assets. |
+| **Tutor de Inglés (Alex)** | `POST /api/chat` | ✅ 200 OK | Generación con Gemini Flash: respuesta natural, traducción, fonética, vocabulario, evaluación CEFR y XP. |
+| **Tutora de Mandarín (Mei)** | `POST /api/chat` | ✅ 200 OK | Caracteres hanzi + pinyin guiado, traducción al español, vocabulario HSK y evaluación continua. |
+| **Persistencia / Auth** | `POST /api/auth/*` | ✅ 200 OK | Autenticación híbrida protegida por CORS/Same-Origin. |
 
-2. **Ejecutar Migración de Base de Datos en Supabase**:
-   - Abrir **SQL Editor** en el panel de Supabase (`PolyGloty_OS`).
-   - Copiar y ejecutar el contenido de [`supabase/schema.sql`](file:///c:/Users/Rolando/Downloads/POLYGLOTY%20IN/polyglot-voice/supabase/schema.sql) para crear las tablas `profiles`, `cards`, `competencies`, `conversations` y `session_vocab` con sus políticas RLS.
+---
 
-3. **Pruebas de Campo Finales**:
-   - Probar conversación por voz y reconocimiento Web Speech en `https://polyglot-voice-jtu6.onrender.com` desde smartphone y laptop.
-   - Validar registro y autenticación en la nube.
+## 7. Próximos Pasos Recomendados
+
+1. **Pruebas de Campo en Dispositivos Móviles**:
+   - Abrir [https://polyglot-voice-jtu6.onrender.com](https://polyglot-voice-jtu6.onrender.com) en iPhone (Safari) y Android (Chrome).
+   - Probar la interacción por voz (botón mantener para hablar y síntesis auditiva).
+   - Probar el módulo de calibración de tonos chinos (Web Worker YIN DSP).
+2. **Monitoreo**:
+   - Supervisar logs de Render en caso de consultas concurrentes o picos de tráfico.
