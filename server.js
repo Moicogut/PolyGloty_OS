@@ -269,10 +269,11 @@ const routes = {
               contents: geminiContents,
               generationConfig: {
                 temperature: 0.7,
-                maxOutputTokens: 600,
+                maxOutputTokens: 800,
+                responseMimeType: "application/json",
               },
             }),
-            signal: AbortSignal.timeout(12000),
+            signal: AbortSignal.timeout(15000),
           });
 
           const data = await response.json();
@@ -293,24 +294,40 @@ const routes = {
         return send(res, 503, { error: `Gemini temporalmente no disponible: ${lastError || "Servidores ocupados"}` });
       }
 
-      let parsed = { reply: rawText, translation: "", vocabulary: [], feedback: null };
+      let parsed = { reply: "", translation: "", vocabulary: [], feedback: null };
       try {
-        parsed = JSON.parse(rawText);
+        parsed = JSON.parse(rawText.trim());
       } catch {
-        const m = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        const m = rawText.match(/\{[\s\S]*\}/);
         if (m) {
-          try { parsed = JSON.parse(m[1]); } catch {}
-        } else {
-          const s = rawText.indexOf("{");
-          const e = rawText.lastIndexOf("}");
-          if (s !== -1 && e > s) {
-            try { parsed = JSON.parse(rawText.slice(s, e + 1)); } catch {}
-          }
+          try { parsed = JSON.parse(m[0]); } catch {}
         }
       }
 
-      // Si parsed no tiene reply pero el rawText tenía contenido
-      if (!parsed.reply && rawText) parsed.reply = rawText;
+      // Si aún no hay reply limpio, extraerlo con regex de las claves JSON o usar texto plano sin llaves
+      if (!parsed.reply) {
+        const replyMatch = rawText.match(/"reply"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/i);
+        if (replyMatch) {
+          try {
+            parsed.reply = JSON.parse(`"${replyMatch[1]}"`);
+          } catch {
+            parsed.reply = replyMatch[1];
+          }
+        } else {
+          parsed.reply = rawText.replace(/[{}"[\]]/g, "").trim();
+        }
+      }
+
+      if (!parsed.translation) {
+        const transMatch = rawText.match(/"translation"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/i);
+        if (transMatch) {
+          try {
+            parsed.translation = JSON.parse(`"${transMatch[1]}"`);
+          } catch {
+            parsed.translation = transMatch[1];
+          }
+        }
+      }
 
       // Actualizar competencias de proceso si el feedback contiene notas o puntuaciones
       if (parsed.feedback) {

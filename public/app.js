@@ -383,6 +383,11 @@ function cleanTextForSpeech(raw) {
 
 function speakVoice(text) {
   if (!("speechSynthesis" in window) || !text) return;
+
+  // En Android y Chrome, speechSynthesis puede pausarse si el usuario no ha interactuado
+  if (window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
+  }
   window.speechSynthesis.cancel();
 
   const clean = cleanTextForSpeech(text);
@@ -396,9 +401,8 @@ function speakVoice(text) {
 
   if (!cachedVoices.length) loadSystemVoices();
 
-  // Buscar preferentemente voces naturales / mejor calidad
   const langPrefix = targetLang === "zh" ? "zh" : "en";
-  const candidates = cachedVoices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix));
+  const candidates = cachedVoices.filter((v) => v.lang && v.lang.toLowerCase().startsWith(langPrefix));
   const premiumVoice = candidates.find((v) => /natural|premium|online|google|samantha|karen|tingting/i.test(v.name)) || candidates[0];
   if (premiumVoice) ut.voice = premiumVoice;
 
@@ -412,13 +416,18 @@ function speakVoice(text) {
     const badge = $("#tutorBadge");
     if (badge) badge.textContent = isConnected ? "Escuchando" : "Listo";
   };
-  ut.onerror = () => {
+  ut.onerror = (e) => {
+    console.warn("SpeechSynthesis error:", e);
     $("#avatarIcon")?.classList.remove("speaking");
     const badge = $("#tutorBadge");
     if (badge) badge.textContent = isConnected ? "Listo" : "Desconectado";
   };
 
+  // Timeout para evitar que Chrome/Android congele speech synthesis
   window.speechSynthesis.speak(ut);
+  if (window.speechSynthesis.paused) {
+    window.speechSynthesis.resume();
+  }
 }
 
 function checkMissionProgress(userText) {
