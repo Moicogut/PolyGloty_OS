@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polyglot Voice · AI Language Immersion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="brand-icon">✨</div>
+    <span>Polyglot Voice</span>
+  </div>
+  <div class="user-stats">
+    <div class="meter" aria-label="Nivel y experiencia">
+      <b id="lv">Nv 1</b>
+      <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i id="xb"></i></div>
+      <span id="xp">0 XP</span>
+    </div>
+    <div class="chips">
+      <span id="streak" class="chip streak-active">🔥 Racha 0</span>
+      <span id="duechip" class="chip">📚 0 por repasar</span>
+    </div>
+    <button id="authBtn" type="button" class="auth-btn" title="Cuenta y Sincronización">
+      <span id="userAvatar">👤</span> <span id="userName">Mi Cuenta</span>
+    </button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="speak" aria-selected="true">
+    <span>🎙️</span> Hablar con Tutor
+  </button>
+  <button role="tab" data-tab="tones" aria-selected="false">
+    <span>🎵</span> Tonos Chinos
+  </button>
+  <button role="tab" data-tab="review" aria-selected="false">
+    <span>🧠</span> Repaso SRS
+  </button>
+  <button role="tab" data-tab="progress" aria-selected="false">
+    <span>🏆</span> Mi Progreso
+  </button>
+</nav>
+
+<main>
+  <!-- TAB 1: HABLAR (ESTILO PRAKTIKA CON TUTOR AVATAR) -->
+  <section id="speak" class="panel">
+    <div class="tutor-hero">
+      <div class="tutor-avatar" id="avatarIcon">🤖</div>
+      <div class="tutor-info">
+        <h3>
+          <span id="tutorName">Alex, tu Tutor AI</span>
+          <span class="tutor-status-badge" id="tutorBadge">Listo para conversar</span>
+        </h3>
+        <p id="tutorRole">Inicia la conversación para practicar pronunciación y fluidez conversacional en tiempo real.</p>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Idioma 
+        <select id="lang">
+          <option value="en">English (Inglés)</option>
+          <option value="zh">中文 (Mandarín)</option>
+        </select>
+      </label>
+      <label>Nivel <select id="level"></select></label>
+      <label class="grow">Misión o Escenario <select id="mission"></select></label>
+    </div>
+
+    <div class="voice-bar">
+      <div class="pulse-dot" id="pulseDot" style="display: none;"></div>
+      <span id="status" class="muted" role="status">Desconectado</span>
+    </div>
+
+    <div class="row">
+      <button id="connect" class="primary">
+        <span>▶</span> Iniciar conversación
+      </button>
+      <button id="mute" disabled>
+        <span>🎤</span> Hablar / Mantener
+      </button>
+      <button id="hangup" class="danger" disabled>
+        <span>⏹</span> Terminar sesión
+      </button>
+    </div>
+
+    <ul id="objs" class="objs"></ul>
+    
+    <div id="chat" class="chat-container" aria-live="polite"></div>
+
+    <!-- Barra interactiva de chat (Texto + Voz + Traductor) -->
+    <div class="chat-input-bar">
+      <button id="toggleTransBtn" type="button" class="trans-toggle-btn" title="Alternar traducción al español">
+        <span>🌐</span> <small>Trad: <b id="transStateLabel">ON</b></small>
+      </button>
+      <input id="chatText" type="text" placeholder="Escribe en inglés o español... (Enter para enviar)" autocomplete="off" disabled>
+      <button id="voiceBtn" type="button" class="icon-voice-btn" title="Hablar con el micrófono" disabled>
+        🎤
+      </button>
+      <button id="sendBtn" type="button" class="send-btn" title="Enviar respuesta" disabled>
+        <span>➤</span> Enviar
+      </button>
+    </div>
+
+    <div class="chat-footer-stats">
+      <span class="muted small">Latencia de respuesta: <b id="lat">—</b></span>
+      <span class="muted small" id="liveFeedbackNotice"></span>
+    </div>
+
+    <!-- Caja de Vocabulario de Avance -->
+    <div class="vocab-drawer" id="vocabBox">
+      <div class="vocab-header">
+        <div>
+          <h4><span>📖</span> Vocabulario de Avance <span class="vocab-counter" id="vocabCount">0</span></h4>
+          <span class="muted small">Términos clave extraídos de tu conversación activa</span>
+        </div>
+        <button id="openVocabBankBtn" type="button" class="pill-btn" title="Ver vocabulario guardado">
+          <span>📚</span> Mazo Guardado (<b id="savedVocabCount">0</b>)
+        </button>
+      </div>
+      <div class="vocab-grid" id="vocabGrid">
+        <div class="empty-vocab muted small">Las palabras clave que aprendas o utilices en la conversación aparecerán aquí para guardarlas a tu mazo de repaso.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 2: TONOS -->
+  <section id="tones" class="panel" hidden>
+    <div class="row">
+      <label class="grow">Frase o palabra a practicar <select id="drillSel"></select></label>
+      <button id="listenModelBtn" type="button" class="pill-btn"><span>🔊</span> Escuchar modelo</button>
+      <button id="rec" class="primary"><span>🔴</span> Grabar voz</button>
+    </div>
+    <div class="target">
+      <span id="han" lang="zh-CN">你好</span>
+      <span id="py"></span>
+    </div>
+    <canvas id="plot" width="900" height="280" aria-label="Contorno de tono"></canvas>
+    <div id="toneOut" class="toneout" aria-live="polite"></div>
+    <p class="muted small" style="margin-top: 14px;">El algoritmo YIN analiza el tono fundamental en tu dispositivo sin enviar audio a ningún servidor externo.</p>
+  </section>
+
+  <!-- TAB 3: REPASO SRS -->
+  <section id="review" class="panel" hidden>
+    <div id="rvEmpty" class="muted" hidden style="padding: 30px; text-align: center;">No hay tarjetas pendientes por repasar en este momento.</div>
+    <div id="rvCard" class="rvcard" hidden>
+      <div class="muted small" id="rvCount"></div>
+      <div class="rvprompt" id="rvPrompt"></div>
+      <div id="rvAns" hidden>
+        <div class="rvfront" id="rvFront" lang="zh-CN"></div>
+        <div id="rvPy" class="rvpy"></div>
+        <div id="rvEx" class="muted" style="margin-top: 8px;"></div>
+      </div>
+      <div class="row" style="justify-content: center; margin-top: 10px;">
+        <button id="rvShow" class="primary">Mostrar respuesta</button>
+        <button id="rvSay" hidden>🔊 Escuchar</button>
+        <button id="rvTone" hidden>🎵 Practicar tonos</button>
+      </div>
+      <div class="grades" id="rvGrades" hidden></div>
+    </div>
+  </section>
+
+  <!-- TAB 4: PROGRESO Y EVALUACIÓN DE COMPETENCIAS -->
+  <section id="progress" class="panel" hidden>
+    <!-- Cuadro de Evaluación y Competencias Verificables -->
+    <div class="eval-dashboard">
+      <div class="eval-header">
+        <div>
+          <h2>Evaluación de Competencias</h2>
+          <p class="muted small">Marco de referencia según el estándar internacional CEFR / HSK</p>
+        </div>
+        <div class="level-verified-badge" id="verifiedLevelBadge">Nivel Actual: Evaluando…</div>
+      </div>
+
+      <div class="competency-grid">
+        <div class="comp-card">
+          <div class="comp-title">
+            <span>📐 Gramática y Estructura</span>
+            <b id="compGrammarVal">60%</b>
+          </div>
+          <div class="comp-bar"><div class="comp-fill" id="compGrammarFill" style="width: 60%"></div></div>
+          <small class="muted">Tiempos verbales, concordancia y orden sintáctico</small>
+        </div>
+
+        <div class="comp-card">
+          <div class="comp-title">
+            <span>📖 Riqueza Léxica</span>
+            <b id="compVocabVal">65%</b>
+          </div>
+          <div class="comp-bar"><div class="comp-fill" id="compVocabFill" style="width: 65%"></div></div>
+          <small class="muted">Amplitud de vocabulario y precisión terminológica</small>
+        </div>
+
+        <div class="comp-card">
+          <div class="comp-title">
+            <span>⚡ Fluidez y Ritmo</span>
+            <b id="compFluencyVal">55%</b>
+          </div>
+          <div class="comp-bar"><div class="comp-fill" id="compFluencyFill" style="width: 55%"></div></div>
+          <small class="muted">Espontaneidad, tiempo de respuesta y naturalidad</small>
+        </div>
+
+        <div class="comp-card">
+          <div class="comp-title">
+            <span>🎯 Comprensión y Coherencia</span>
+            <b id="compCompVal">70%</b>
+          </div>
+          <div class="comp-bar"><div class="comp-fill" id="compCompFill" style="width: 70%"></div></div>
+          <small class="muted">Capacidad de entender preguntas y sostener la interacción</small>
+        </div>
+      </div>
+
+      <div class="milestones-box">
+        <h3>🏁 Hitos y Logros Verificables del Nivel</h3>
+        <p class="muted small">Demuestra estas habilidades durante tus conversaciones para certificar tu nivel.</p>
+        <div class="milestones-list" id="milestonesList"></div>
+      </div>
+    </div>
+
+    <h2 style="margin-top: 32px;">Misiones diarias</h2>
+    <ul id="quests" class="quests"></ul>
+
+    <h2 style="margin-top: 24px;">Puntos débiles a reforzar</h2>
+    <ul id="weak" class="weak"></ul>
+
+    <h2 style="margin-top: 24px;">Pronóstico de repaso (7 días)</h2>
+    <div id="fc" class="fc"></div>
+
+    <h2 style="margin-top: 24px;">Medallas e Insignias obtenidas</h2>
+    <div id="badges" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+  </section>
+</main>
+
+<!-- MODAL DE AUTENTICACIÓN / USUARIOS (SUPABASE READY) -->
+<div id="authModal" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="authModalTitle">Mi Cuenta y Sincronización</h3>
+      <button id="closeAuthModal" type="button" class="modal-close">&times;</button>
+    </div>
+
+    <!-- Vista de Sesión Iniciada -->
+    <div id="authLoggedInView" hidden>
+      <div class="user-profile-badge">
+        <span class="user-avatar-lg">👤</span>
+        <div>
+          <h4 id="userProfileEmail">usuario@ejemplo.com</h4>
+          <span class="muted small" id="userProfileId">Tenant ID: default</span>
+        </div>
+      </div>
+      <p class="muted small" style="margin: 14px 0;">Tus conversaciones, tarjetas, nivel CEFR y vocabulario están sincronizados y respaldados en la nube.</p>
+      <div class="row" style="margin-top: 18px;">
+        <button id="logoutBtn" type="button" class="danger">Cerrar Sesión</button>
+      </div>
+    </div>
+
+    <!-- Vista de Formulario Login / Registro -->
+    <div id="authLoggedOutView">
+      <div class="auth-tabs">
+        <button id="tabLogin" type="button" class="auth-tab-btn active">Iniciar Sesión</button>
+        <button id="tabRegister" type="button" class="auth-tab-btn">Crear Cuenta</button>
+      </div>
+
+      <form id="authForm" style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+        <label>Correo Electrónico o Usuario
+          <input id="authEmail" type="text" placeholder="nombre@correo.com" required autocomplete="username">
+        </label>
+        <label>Contraseña
+          <input id="authPassword" type="password" placeholder="Tu contraseña" required autocomplete="current-password">
+        </label>
+        <div id="authError" class="muted small danger" style="min-height: 18px;"></div>
+        <button id="authSubmitBtn" type="submit" class="primary" style="margin-top: 6px;">
+          Ingresar
+        </button>
+      </form>
+      <p class="muted small" style="margin-top: 14px; text-align: center;">
+        Conectado a la base de datos Supabase / Multi-tenant para almacenar tu progreso en tiempo real.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE BANCO DE VOCABULARIO GUARDADO -->
+<div id="vocabModal" class="modal-overlay" hidden>
+  <div class="modal-card modal-lg">
+    <div class="modal-header">
+      <div>
+        <h3>📚 Mazo de Vocabulario y Repaso</h3>
+        <p class="muted small">Tarjetas guardadas para consolidar en tu memoria a largo plazo</p>
+      </div>
+      <button id="closeVocabModal" type="button" class="modal-close">&times;</button>
+    </div>
+    
+    <div class="row" style="margin-bottom: 14px;">
+      <input id="searchVocabInput" type="text" placeholder="Buscar palabra, traducción o pinyin..." class="grow">
+    </div>
+
+    <div id="savedVocabList" class="saved-vocab-list">
+      <div class="muted small" style="text-align: center; padding: 24px;">No tienes tarjetas de vocabulario guardadas aún.</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
