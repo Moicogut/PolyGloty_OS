@@ -211,7 +211,8 @@ function initSpeechRecognition() {
     return null;
   }
   const rec = new SpeechRecognition();
-  rec.continuous = false;
+  // Modo continuo: NO corta abruptamente si el alumno hace pausas para pensar
+  rec.continuous = true;
   rec.interimResults = true;
   rec.maxAlternatives = 1;
 
@@ -219,24 +220,27 @@ function initSpeechRecognition() {
 
   rec.onstart = () => {
     isRecording = true;
-    activeTranscript = "";
+    activeTranscript = $("#chatText") ? $("#chatText").value : "";
     if ($("#voiceBtn")) $("#voiceBtn").classList.add("recording");
     if ($("#pulseDot")) $("#pulseDot").style.display = "block";
     const langName = speechInputLang === "es" ? "español" : (lang() === "zh" ? "chino mandarín" : "inglés");
-    status(`🔴 Escuchando en ${langName}… habla ahora`);
+    status(`🔴 Micrófono abierto (${langName}) — habla a tu ritmo y toca de nuevo el mic para enviar`);
   };
 
   rec.onresult = (e) => {
     let interim = "";
-    activeTranscript = "";
-    for (let i = 0; i < e.results.length; ++i) {
+    let finalChunk = "";
+    for (let i = e.resultIndex; i < e.results.length; ++i) {
       if (e.results[i].isFinal) {
-        activeTranscript += e.results[i][0].transcript;
+        finalChunk += e.results[i][0].transcript + " ";
       } else {
         interim += e.results[i][0].transcript;
       }
     }
-    const current = (activeTranscript || interim).trim();
+    if (finalChunk) {
+      activeTranscript += finalChunk;
+    }
+    const current = (activeTranscript + (interim ? " " + interim : "")).trim();
     if (current && $("#chatText")) {
       $("#chatText").value = current;
     }
@@ -244,25 +248,32 @@ function initSpeechRecognition() {
 
   rec.onerror = (e) => {
     console.warn("Speech recognition error:", e.error);
-    isRecording = false;
-    if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
-    if ($("#pulseDot")) $("#pulseDot").style.display = "none";
     if (e.error === "not-allowed") {
       toast("Permiso de micrófono denegado en el navegador.");
+      isRecording = false;
+      if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
     } else if (e.error === "no-speech") {
-      status("No se detectó voz. Vuelve a pulsar el micrófono.");
+      // Ignorar silencio temporal para permitir al alumno pensar sin cortar la sesión
+      console.log("Silencio detectado; micrófono sigue activo");
     }
   };
 
   rec.onend = async () => {
-    isRecording = false;
-    if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
-    if ($("#pulseDot")) $("#pulseDot").style.display = "none";
-    status(isConnected ? "Listo: habla o escribe tu respuesta" : "Desconectado");
+    // Si fue detenido explícitamente por el usuario
+    if (!isRecording) {
+      if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
+      if ($("#pulseDot")) $("#pulseDot").style.display = "none";
+      status(isConnected ? "Listo: habla o escribe tu respuesta" : "Desconectado");
+      return;
+    }
 
-    const textToSend = ($("#chatText")?.value || activeTranscript || "").trim();
-    if (textToSend) {
-      await sendUserTurn(textToSend);
+    // Si el navegador cortó por inactividad extrema pero el usuario seguía grabando, reiniciar automáticamente
+    try {
+      rec.start();
+    } catch {
+      isRecording = false;
+      if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
+      if ($("#pulseDot")) $("#pulseDot").style.display = "none";
     }
   };
 
@@ -279,9 +290,22 @@ function toggleRecording() {
     toast("Navegador sin soporte de voz. Escribe directamente en el chat.");
     return;
   }
+
   if (isRecording) {
-    recognition.stop();
+    // Al presionar para cerrar el micrófono: enviar la frase completa
+    isRecording = false;
+    try { recognition.stop(); } catch {}
+    if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
+    if ($("#pulseDot")) $("#pulseDot").style.display = "none";
+
+    const textToSend = ($("#chatText")?.value || "").trim();
+    if (textToSend) {
+      sendUserTurn(textToSend);
+    } else {
+      status("Listo: habla o escribe tu respuesta");
+    }
   } else {
+    // Iniciar escucha pausada
     recognition.lang = getSpeechLangCode();
     try {
       recognition.start();
@@ -423,29 +447,32 @@ function speakVoice(text) {
     const badge = $("#tutorBadge");
     if (badge) badge.textContent = "Hablando…";
   };
+  // En Chrome de Windows/Laptop, almacenar en ámbito global previene que el Garbage Collector recoja la voz
+  currentSynthUtterance = ut;
+
   ut.onend = () => {
+    currentSynthUtterance = null;
     $("#avatarIcon")?.classList.remove("speaking");
     const badge = $("#tutorBadge");
     if (badge) badge.textContent = isConnected ? "Escuchando" : "Listo";
   };
+
   ut.onerror = (e) => {
     console.warn("SpeechSynthesis error:", e);
+    currentSynthUtterance = null;
     $("#avatarIcon")?.classList.remove("speaking");
     const badge = $("#tutorBadge");
     if (badge) badge.textContent = isConnected ? "Listo" : "Desconectado";
   };
 
-  // En Chrome Windows, una ejecución diferida de 10ms previene que la utterance sea silenciada por el GC
-  setTimeout(() => {
-    try {
-      synth.speak(ut);
-      if (synth.paused) {
-        synth.resume();
-      }
-    } catch (err) {
-      console.warn("Fallo al reproducir utterance:", err);
+  try {
+    synth.speak(ut);
+    if (synth.paused) {
+      synth.resume();
     }
-  }, 10);
+  } catch (err) {
+    console.warn("Fallo al reproducir utterance:", err);
+  }
 }
 
 function checkMissionProgress(userText) {
