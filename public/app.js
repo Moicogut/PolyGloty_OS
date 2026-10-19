@@ -8,6 +8,8 @@ let currentUser = null;
 try {
   const raw = store.get("polyglot_user", null);
   if (raw) currentUser = JSON.parse(raw);
+} catch {}
+
 // Gestión de Visión Clara (Día) / Oscura (Noche)
 let currentTheme = store.get("polyglot_theme", "dark");
 function applyTheme(theme) {
