@@ -1185,6 +1185,34 @@ button.danger:hover:not(:disabled) {
 }
 
 /* Tutor Hero Compacto (Estilo Praktika) */
+.tutor-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.14), rgba(6, 182, 212, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.tutor-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tutor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .tutor-avatar-wrap {
   position: relative;
   width: 58px;
@@ -1217,17 +1245,39 @@ button.danger:hover:not(:disabled) {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tutor-name-row h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
 }
 
 .start-session-btn {
-  padding: 8px 16px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 10px 18px;
   border-radius: var(--radius-full);
   font-size: 13px;
-  flex-shrink: 0;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.start-session-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  transform: translateY(-1px);
 }
 
 .hangup-session-btn {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: var(--radius-full);
   font-size: 13px;
   flex-shrink: 0;
@@ -1383,8 +1433,8 @@ button.danger:hover:not(:disabled) {
   left: 0;
   right: 0;
   height: 64px;
-  background: rgba(19, 27, 38, 0.94);
-  backdrop-filter: blur(16px);
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(20px);
   border-top: 1px solid var(--border-subtle);
   z-index: 100;
   padding: 6px 12px;
@@ -1400,7 +1450,7 @@ button.danger:hover:not(:disabled) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   color: var(--text-dim);
   font-size: 11px;
   font-weight: 600;
@@ -1411,7 +1461,7 @@ button.danger:hover:not(:disabled) {
 }
 
 .bottom-nav-item .nav-icon {
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
 }
 
@@ -1429,11 +1479,12 @@ button.danger:hover:not(:disabled) {
    ======================================================== */
 @media (max-width: 768px) {
   body {
-    padding-bottom: 74px; /* Espacio para el Bottom Nav Bar */
+    padding-bottom: 96px; /* Espacio generoso para que nada quede oculto detrás del Bottom Nav Bar */
   }
 
   .top {
     padding: 10px 14px;
+    gap: 8px;
   }
 
   .brand {
@@ -1448,20 +1499,26 @@ button.danger:hover:not(:disabled) {
   }
 
   .user-stats {
-    gap: 8px;
+    gap: 6px;
   }
 
   .meter {
     padding: 4px 8px;
-    gap: 6px;
+    gap: 4px;
   }
 
   .bar {
-    width: 50px;
+    display: none; /* Eliminar barra estática para que 'Nv 1' y 'XP' no queden comprimidos verticalmente */
+  }
+
+  .chips .chip {
+    padding: 4px 8px;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   .chips .chip:last-child {
-    display: none; /* Ocultar chip secundario en pantallas estrechas */
+    display: none; /* Ocultar segundo chip en pantallas pequeñas */
   }
 
   .auth-name {
@@ -1482,7 +1539,7 @@ button.danger:hover:not(:disabled) {
   }
 
   main {
-    padding: 8px 10px 20px;
+    padding: 8px 10px 24px;
   }
 
   .panel {
@@ -1490,41 +1547,62 @@ button.danger:hover:not(:disabled) {
     border-radius: var(--radius-md);
   }
 
+  /* Tutor Hero en Móvil: distribución espaciosa vertical sin textos apretados */
   .tutor-hero {
-    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
     gap: 12px;
-    margin-bottom: 12px;
+  }
+
+  .tutor-header-left {
+    width: 100%;
+    gap: 12px;
   }
 
   .tutor-avatar-wrap {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
   }
 
   .tutor-avatar {
-    width: 48px;
-    height: 48px;
-    font-size: 24px;
+    width: 52px;
+    height: 52px;
+    font-size: 26px;
   }
 
-  .tutor-info h3 {
-    font-size: 15px;
+  .tutor-name-row h3 {
+    font-size: 16px;
+    white-space: nowrap;
   }
 
   .tutor-info p {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.35;
+    color: var(--text-muted);
+  }
+
+  .tutor-header-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
   }
 
   .start-session-btn {
-    padding: 6px 12px;
-    font-size: 12px;
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 14px;
+    justify-content: center;
+  }
+
+  .hangup-session-btn {
+    padding: 12px 16px;
   }
 
   .chat-container {
     min-height: 240px;
-    max-height: 45vh;
-    padding: 10px;
+    max-height: 48vh;
+    padding: 12px;
     gap: 10px;
   }
 
@@ -1535,7 +1613,7 @@ button.danger:hover:not(:disabled) {
   }
 
   .conversation-dock {
-    padding: 4px 8px;
+    padding: 6px 8px;
     gap: 6px;
   }
 

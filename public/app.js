@@ -442,13 +442,12 @@ async function connect() {
 
     isConnected = true;
     conversationHistory = [];
-    $("#mute").disabled = false;
-    $("#hangup").disabled = false;
-    $("#connect").disabled = true;
+    if ($("#hangup")) $("#hangup").disabled = false;
+    if ($("#connect")) $("#connect").disabled = true;
     if ($("#chatText")) { $("#chatText").disabled = false; $("#chatText").focus(); }
     if ($("#sendBtn")) $("#sendBtn").disabled = false;
     if ($("#voiceBtn")) $("#voiceBtn").disabled = false;
-    $("#tutorBadge").textContent = "Conectado";
+    if ($("#tutorBadge")) $("#tutorBadge").textContent = "Conectado";
 
     // Mensaje de apertura de la escena
     const greeting = lang() === "zh"
@@ -475,14 +474,13 @@ function hangup() {
   if (recognition) {
     try { recognition.abort(); } catch {}
   }
-  $("#connect").disabled = false;
-  if ($("#mute")) $("#mute").disabled = true;
-  $("#hangup").disabled = true;
+  if ($("#connect")) $("#connect").disabled = false;
+  if ($("#hangup")) $("#hangup").disabled = true;
   if ($("#chatText")) { $("#chatText").disabled = true; $("#chatText").value = ""; }
   if ($("#sendBtn")) $("#sendBtn").disabled = true;
   if ($("#voiceBtn")) $("#voiceBtn").disabled = true;
   if ($("#pulseDot")) $("#pulseDot").style.display = "none";
-  $("#tutorBadge").textContent = "Desconectado";
+  if ($("#tutorBadge")) $("#tutorBadge").textContent = "Desconectado";
   status("Desconectado");
 
   // Persistir conversación en Supabase / Multi-tenant store si tuvo intercambios
