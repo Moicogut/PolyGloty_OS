@@ -34,6 +34,31 @@
   --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
 }
 
+[data-theme="light"] {
+  --bg-base: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-card: #f8fafc;
+  --bg-input: #e2e8f0;
+  
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: rgba(79, 70, 229, 0.12);
+  
+  --secondary: #0284c7;
+  --secondary-glow: rgba(2, 132, 199, 0.15);
+  
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+  
+  --border-subtle: rgba(15, 23, 42, 0.10);
+  --border-focus: rgba(79, 70, 229, 0.40);
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.10);
+  --shadow-glow: 0 0 16px rgba(79, 70, 229, 0.20);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -158,6 +183,34 @@ body {
   color: var(--accent-gold);
   border-color: rgba(245, 158, 11, 0.3);
   background: rgba(245, 158, 11, 0.08);
+}
+
+.theme-toggle-btn,
+.auth-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover,
+.auth-btn:hover {
+  border-color: var(--border-focus);
+  background: var(--bg-surface);
+  transform: translateY(-1px);
+}
+
+.theme-toggle-btn {
+  padding: 6px 10px;
+  font-size: 14px;
 }
 
 /* Nav Tabs */

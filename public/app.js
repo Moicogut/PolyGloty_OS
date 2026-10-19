@@ -8,7 +8,18 @@ let currentUser = null;
 try {
   const raw = store.get("polyglot_user", null);
   if (raw) currentUser = JSON.parse(raw);
-} catch {}
+// Gestión de Visión Clara (Día) / Oscura (Noche)
+let currentTheme = store.get("polyglot_theme", "dark");
+function applyTheme(theme) {
+  currentTheme = theme;
+  document.documentElement.setAttribute("data-theme", theme);
+  store.set("polyglot_theme", theme);
+  const icon = $("#themeIcon");
+  if (icon) {
+    icon.textContent = theme === "light" ? "🌙" : "☀️";
+  }
+}
+applyTheme(currentTheme);
 
 const api = async (p, opt = {}) => {
   const headers = { ...(opt.headers || {}) };
@@ -869,6 +880,11 @@ function closeAuthModal() {
 
 $("#authBtn")?.addEventListener("click", openAuthModal);
 $("#closeAuthModal")?.addEventListener("click", closeAuthModal);
+$("#themeToggleBtn")?.addEventListener("click", () => {
+  const nextTheme = currentTheme === "light" ? "dark" : "light";
+  applyTheme(nextTheme);
+  toast(`Modo cambiado a: ${nextTheme === "light" ? "Visión Clara (Día) ☀️" : "Visión Oscura (Noche) 🌙"}`);
+});
 
 $("#tabLogin")?.addEventListener("click", () => {
   authMode = "login";

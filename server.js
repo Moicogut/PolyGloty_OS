@@ -247,14 +247,21 @@ const routes = {
       model: GEMINI_MODEL,
     });
 
-    const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    const candidateModels = [
+      process.env.GEMINI_MODEL,
+      "gemini-3.8-flash",
+      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-flash-latest",
+    ].filter(Boolean);
     let rawText = "";
     let lastError = null;
 
     try {
       for (const candModel of candidateModels) {
         try {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${candModel}:generateContent?key=${key}`, {
+          const modelEndpoint = candModel.startsWith("models/") ? candModel.replace("models/", "") : candModel;
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${key}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -265,7 +272,7 @@ const routes = {
                 maxOutputTokens: 600,
               },
             }),
-            signal: AbortSignal.timeout(10000),
+            signal: AbortSignal.timeout(12000),
           });
 
           const data = await response.json();
