@@ -73,16 +73,27 @@ Documento de memoria técnica, decisiones arquitectónicas, estado actual del si
 
 ---
 
-## 5. Tareas Pendientes para la Próxima Sesión
+## 5. Despliegue en la Nube y Estado Live
 
-1. **Subida y Despliegue en la Nube**:
-   - Inicializar repositorio Git local (`git init`).
-   - Crear repositorio en GitHub / GitLab y subir el código (`git push origin main`).
-   - Conectar el repositorio a **Render** utilizando el archivo [`render.yaml`](file:///c:/Users/Rolando/Downloads/POLYGLOTY%20IN/polyglot-voice/render.yaml) para obtener una URL pública HTTPS gratuita.
-2. **Configuración de Secretos en la Nube**:
-   - Cargar `GEMINI_API_KEY` en el panel de variables de entorno de Render.
-   - Opcional: Vincular `SUPABASE_URL` y `SUPABASE_KEY` del proyecto de Supabase si se requiere base de datos Postgres en la nube.
-3. **Pruebas de Campo con el Equipo de Trabajo**:
-   - Probar el enlace HTTPS en smartphones (Safari iOS y Chrome Android).
-   - Validar latencia de respuesta conversacional y reconocimiento de voz en condiciones reales de red.
-   - Recopilar sugerencias de experiencia de usuario (UI/UX) para iterar en la siguiente versión.
+- **URL de Producción (HTTPS)**: [https://polyglot-voice-jtu6.onrender.com](https://polyglot-voice-jtu6.onrender.com)
+- **Repositorio Remoto**: [https://github.com/Moicogut/PolyGloty_OS.git](https://github.com/Moicogut/PolyGloty_OS.git)
+- **Servicio Render**: `polyglot-voice` (Blueprint en ejecución en región Oregon).
+- **Proyecto Supabase**: `https://jszkayddqctusgmcwyzi.supabase.co` (`PolyGloty_OS`)
+
+---
+
+## 6. Tareas Pendientes para Completar la Integración Cloud
+
+1. **Configurar Variables de Entorno en Render**:
+   - En Render Dashboard (`polyglot-voice` -> **Environment**):
+     - `GEMINI_API_KEY`: Clave de API de Google Gemini (imprescindible para conversación en vivo con Alex y Mei).
+     - `SUPABASE_URL`: `https://jszkayddqctusgmcwyzi.supabase.co`
+     - `SUPABASE_KEY`: Clave `Publishable key` (`sb_publishable_...`) copiada desde el panel de Supabase.
+
+2. **Ejecutar Migración de Base de Datos en Supabase**:
+   - Abrir **SQL Editor** en el panel de Supabase (`PolyGloty_OS`).
+   - Copiar y ejecutar el contenido de [`supabase/schema.sql`](file:///c:/Users/Rolando/Downloads/POLYGLOTY%20IN/polyglot-voice/supabase/schema.sql) para crear las tablas `profiles`, `cards`, `competencies`, `conversations` y `session_vocab` con sus políticas RLS.
+
+3. **Pruebas de Campo Finales**:
+   - Probar conversación por voz y reconocimiento Web Speech en `https://polyglot-voice-jtu6.onrender.com` desde smartphone y laptop.
+   - Validar registro y autenticación en la nube.
