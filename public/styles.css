@@ -1094,9 +1094,473 @@ button.danger:hover:not(:disabled) {
   gap: 12px;
 }
 
-@media (max-width: 640px) {
-  .top { padding: 12px 16px; }
-  .tabs button { padding: 8px 12px; font-size: 13px; }
-  .grades { grid-template-columns: repeat(2, 1fr); }
-  .tutor-hero { flex-direction: column; text-align: center; }
+/* --- Componentes Nuevos UI/UX Praktika --- */
+
+/* Barra de configuración rápida */
+.quick-config-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
+
+.config-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.config-pill select {
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-size: 13px;
+  padding: 4px 0;
+  outline: none;
+  cursor: pointer;
+}
+
+.config-pill.grow-pill {
+  flex: 1;
+  min-width: 140px;
+}
+
+.objs-toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.objs-toggle-pill:hover {
+  background: rgba(99, 102, 241, 0.22);
+}
+
+/* Acordeón de Objetivos de Misión */
+.objs-drawer {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+  overflow: hidden;
+}
+
+.objs-drawer.collapsed {
+  display: none;
+}
+
+.objs-drawer-header {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Indicador de estado de voz */
+.voice-status-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Tutor Hero Compacto (Estilo Praktika) */
+.tutor-avatar-wrap {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+}
+
+.tutor-pulse-ring {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--primary);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tutor-avatar.speaking + .tutor-pulse-ring {
+  animation: pulseRing 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.tutor-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.start-session-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.hangup-session-btn {
+  padding: 8px 12px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* Dock Inferior Unificado de Conversación */
+.conversation-dock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 6px 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  margin-bottom: 10px;
+}
+
+.dock-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dock-pill-btn.active {
+  background: rgba(6, 182, 212, 0.18);
+  border-color: rgba(6, 182, 212, 0.5);
+  color: var(--secondary);
+}
+
+.dock-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--bg-input);
+  border-radius: var(--radius-full);
+  padding: 2px 8px 2px 14px;
+  min-width: 0;
+}
+
+.dock-input-wrap input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-size: 14px;
+  padding: 8px 0;
+  outline: none;
+  min-width: 60px;
+}
+
+.dock-send-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dock-send-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Botón Central de Micrófono Praktika */
+.main-voice-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  color: white;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px var(--primary-light);
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.main-voice-btn:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+
+.main-voice-btn.recording {
+  background: var(--accent-danger);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+  animation: pulseAvatar 1.1s infinite;
+}
+
+.main-voice-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.link-vocab-btn {
+  background: transparent;
+  border: none;
+  color: var(--secondary);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.vocab-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.vocab-summary::-webkit-details-marker {
+  display: none;
+}
+
+.vocab-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vocab-summary-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Barra de Navegación Inferior (Estilo Móvil Praktika) */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(19, 27, 38, 0.94);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border-subtle);
+  z-index: 100;
+  padding: 6px 12px;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.bottom-nav-item .nav-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bottom-nav-item.active {
+  color: var(--secondary);
+}
+
+.bottom-nav-item.active .nav-icon {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 6px var(--secondary-glow));
+}
+
+/* ========================================================
+   RESPONSIVE DESIGN 100% PARA SMARTPHONES (PANTALLAS < 768px)
+   ======================================================== */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 74px; /* Espacio para el Bottom Nav Bar */
+  }
+
+  .top {
+    padding: 10px 14px;
+  }
+
+  .brand {
+    font-size: 16px;
+    gap: 8px;
+  }
+
+  .brand-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  .user-stats {
+    gap: 8px;
+  }
+
+  .meter {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .bar {
+    width: 50px;
+  }
+
+  .chips .chip:last-child {
+    display: none; /* Ocultar chip secundario en pantallas estrechas */
+  }
+
+  .auth-name {
+    display: none; /* Dejar solo el icono de usuario */
+  }
+
+  .auth-btn {
+    padding: 6px 10px;
+  }
+
+  /* Ocultar las pestañas desktop clásicas y activar el Bottom Nav */
+  .tabs {
+    display: none;
+  }
+
+  .bottom-nav {
+    display: flex;
+  }
+
+  main {
+    padding: 8px 10px 20px;
+  }
+
+  .panel {
+    padding: 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .tutor-hero {
+    padding: 12px 14px;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .tutor-avatar-wrap {
+    width: 48px;
+    height: 48px;
+  }
+
+  .tutor-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+
+  .tutor-info h3 {
+    font-size: 15px;
+  }
+
+  .tutor-info p {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .start-session-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .chat-container {
+    min-height: 240px;
+    max-height: 45vh;
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .b {
+    max-width: 90%;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .conversation-dock {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .main-voice-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .dock-pill-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .chat-footer-stats {
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+
+  .modal-card {
+    padding: 18px;
+  }
+
+  .grades {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

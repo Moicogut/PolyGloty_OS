@@ -13,7 +13,7 @@
 <header class="top">
   <div class="brand">
     <div class="brand-icon">✨</div>
-    <span>Polyglot Voice</span>
+    <span class="brand-text">Polyglot</span>
   </div>
   <div class="user-stats">
     <div class="meter" aria-label="Nivel y experiencia">
@@ -22,110 +22,122 @@
       <span id="xp">0 XP</span>
     </div>
     <div class="chips">
-      <span id="streak" class="chip streak-active">🔥 Racha 0</span>
-      <span id="duechip" class="chip">📚 0 por repasar</span>
+      <span id="streak" class="chip streak-active">🔥 0</span>
+      <span id="duechip" class="chip">📚 0</span>
     </div>
     <button id="authBtn" type="button" class="auth-btn" title="Cuenta y Sincronización">
-      <span id="userAvatar">👤</span> <span id="userName">Mi Cuenta</span>
+      <span id="userAvatar">👤</span> <span id="userName" class="auth-name">Cuenta</span>
     </button>
   </div>
 </header>
 
-<nav class="tabs" role="tablist">
-  <button role="tab" data-tab="speak" aria-selected="true">
-    <span>🎙️</span> Hablar con Tutor
-  </button>
-  <button role="tab" data-tab="tones" aria-selected="false">
-    <span>🎵</span> Tonos Chinos
-  </button>
-  <button role="tab" data-tab="review" aria-selected="false">
-    <span>🧠</span> Repaso SRS
-  </button>
-  <button role="tab" data-tab="progress" aria-selected="false">
-    <span>🏆</span> Mi Progreso
-  </button>
-</nav>
-
 <main>
   <!-- TAB 1: HABLAR (ESTILO PRAKTIKA CON TUTOR AVATAR) -->
-  <section id="speak" class="panel">
+  <section id="speak" class="panel panel-speak">
+    <!-- Header compacto del Tutor estilo Praktika -->
     <div class="tutor-hero">
-      <div class="tutor-avatar" id="avatarIcon">🤖</div>
-      <div class="tutor-info">
-        <h3>
-          <span id="tutorName">Alex, tu Tutor AI</span>
-          <span class="tutor-status-badge" id="tutorBadge">Listo para conversar</span>
-        </h3>
-        <p id="tutorRole">Inicia la conversación para practicar pronunciación y fluidez conversacional en tiempo real.</p>
+      <div class="tutor-avatar-wrap">
+        <div class="tutor-avatar" id="avatarIcon">🧑🏼</div>
+        <div class="tutor-pulse-ring"></div>
       </div>
+      <div class="tutor-info">
+        <div class="tutor-name-row">
+          <h3 id="tutorName">Alex · Tutor de Inglés</h3>
+          <span class="tutor-status-badge" id="tutorBadge">Listo</span>
+        </div>
+        <p id="tutorRole">Conversación inmersiva para fluidez y confianza inmediata.</p>
+      </div>
+      <button id="connect" class="primary start-session-btn" title="Iniciar o reconectar sesión">
+        <span>▶</span> <span class="btn-lbl">Empezar</span>
+      </button>
+      <button id="hangup" class="danger hangup-session-btn" disabled title="Terminar sesión">
+        <span>⏹</span>
+      </button>
     </div>
 
-    <div class="row">
-      <label>Idioma 
+    <!-- Barra de configuración rápida colapsable / compacta -->
+    <div class="quick-config-bar">
+      <div class="config-pill">
+        <span class="cfg-icon">🌐</span>
         <select id="lang">
-          <option value="en">English (Inglés)</option>
-          <option value="zh">中文 (Mandarín)</option>
+          <option value="en">English</option>
+          <option value="zh">中文 (Chino)</option>
         </select>
-      </label>
-      <label>Nivel <select id="level"></select></label>
-      <label class="grow">Misión o Escenario <select id="mission"></select></label>
+      </div>
+      <div class="config-pill">
+        <span class="cfg-icon">🎯</span>
+        <select id="level"></select>
+      </div>
+      <div class="config-pill grow-pill">
+        <span class="cfg-icon">📍</span>
+        <select id="mission"></select>
+      </div>
+      <button id="toggleObjsBtn" type="button" class="objs-toggle-pill" title="Ver objetivos de la misión">
+        <span>📋</span> <small id="objsCountBadge">Objetivos</small>
+      </button>
     </div>
 
-    <div class="voice-bar">
+    <!-- Acordeón de Objetivos de Misión (Colapsable) -->
+    <div class="objs-drawer collapsed" id="objsDrawer">
+      <div class="objs-drawer-header">
+        <span class="small font-bold">Objetivos del Escenario:</span>
+      </div>
+      <ul id="objs" class="objs"></ul>
+    </div>
+
+    <!-- Indicador de estado de voz -->
+    <div class="voice-status-strip">
       <div class="pulse-dot" id="pulseDot" style="display: none;"></div>
-      <span id="status" class="muted" role="status">Desconectado</span>
+      <span id="status" class="muted small" role="status">Toca el micrófono o escribe para conversar</span>
     </div>
 
-    <div class="row">
-      <button id="connect" class="primary">
-        <span>▶</span> Iniciar conversación
-      </button>
-      <button id="mute" disabled>
-        <span>🎤</span> Hablar / Mantener
-      </button>
-      <button id="hangup" class="danger" disabled>
-        <span>⏹</span> Terminar sesión
-      </button>
-    </div>
-
-    <ul id="objs" class="objs"></ul>
-    
+    <!-- Contenedor principal de Chat / Conversación -->
     <div id="chat" class="chat-container" aria-live="polite"></div>
 
-    <!-- Barra interactiva de chat (Texto + Voz + Traductor) -->
-    <div class="chat-input-bar">
-      <button id="toggleTransBtn" type="button" class="trans-toggle-btn" title="Alternar traducción al español">
-        <span>🌐</span> <small>Trad: <b id="transStateLabel">ON</b></small>
+    <!-- Dock inferior unificado de conversación (Estilo Praktika) -->
+    <div class="conversation-dock">
+      <!-- Selector de idioma del micrófono para evitar confusiones de pronunciación -->
+      <button id="speechLangToggleBtn" type="button" class="dock-pill-btn" title="Alternar idioma de escucha del micrófono">
+        <span id="speechLangIcon">🗣️</span> <b id="speechLangLabel">EN</b>
       </button>
-      <input id="chatText" type="text" placeholder="Escribe en inglés o español... (Enter para enviar)" autocomplete="off" disabled>
-      <button id="voiceBtn" type="button" class="icon-voice-btn" title="Hablar con el micrófono" disabled>
-        🎤
+
+      <button id="toggleTransBtn" type="button" class="dock-pill-btn active" title="Alternar traducción al español">
+        <span>🌐</span> <b id="transStateLabel">ES</b>
       </button>
-      <button id="sendBtn" type="button" class="send-btn" title="Enviar respuesta" disabled>
-        <span>➤</span> Enviar
+
+      <div class="dock-input-wrap">
+        <input id="chatText" type="text" placeholder="Escribe o mantén el micrófono..." autocomplete="off">
+        <button id="sendBtn" type="button" class="dock-send-btn" title="Enviar respuesta" disabled>
+          <span>➤</span>
+        </button>
+      </div>
+
+      <!-- Botón central principal de Voz -->
+      <button id="voiceBtn" type="button" class="main-voice-btn" title="Toca o mantén presionado para hablar" disabled>
+        <span class="mic-icon">🎙️</span>
+        <span class="mic-wave"></span>
       </button>
     </div>
 
     <div class="chat-footer-stats">
-      <span class="muted small">Latencia de respuesta: <b id="lat">—</b></span>
-      <span class="muted small" id="liveFeedbackNotice"></span>
+      <span class="muted small">Latencia: <b id="lat">—</b></span>
+      <button id="openVocabBankBtn" type="button" class="link-vocab-btn">
+        <span>📚 Mazo SRS (<b id="savedVocabCount">0</b>)</span>
+      </button>
     </div>
 
-    <!-- Caja de Vocabulario de Avance -->
-    <div class="vocab-drawer" id="vocabBox">
-      <div class="vocab-header">
-        <div>
-          <h4><span>📖</span> Vocabulario de Avance <span class="vocab-counter" id="vocabCount">0</span></h4>
-          <span class="muted small">Términos clave extraídos de tu conversación activa</span>
+    <!-- Vocabulario de Avance en Acordeón elegante -->
+    <details class="vocab-drawer" id="vocabBox">
+      <summary class="vocab-summary">
+        <div class="vocab-summary-left">
+          <span>📖</span> <b>Vocabulario Aprendido</b> <span class="vocab-counter" id="vocabCount">0</span>
         </div>
-        <button id="openVocabBankBtn" type="button" class="pill-btn" title="Ver vocabulario guardado">
-          <span>📚</span> Mazo Guardado (<b id="savedVocabCount">0</b>)
-        </button>
-      </div>
+        <span class="vocab-summary-hint">Ver palabras clave ▾</span>
+      </summary>
       <div class="vocab-grid" id="vocabGrid">
-        <div class="empty-vocab muted small">Las palabras clave que aprendas o utilices en la conversación aparecerán aquí para guardarlas a tu mazo de repaso.</div>
+        <div class="empty-vocab muted small">Las palabras clave aprendidas en la conversación aparecerán aquí.</div>
       </div>
-    </div>
+    </details>
   </section>
 
   <!-- TAB 2: TONOS -->
@@ -306,6 +318,27 @@
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- BARRA DE NAVEGACIÓN INFERIOR (Estilo App Nativa Praktika) -->
+<nav class="bottom-nav" role="tablist">
+  <button role="tab" data-tab="speak" aria-selected="true" class="bottom-nav-item active">
+    <span class="nav-icon">🎙️</span>
+    <span class="nav-label">Tutor</span>
+  </button>
+  <button role="tab" data-tab="tones" aria-selected="false" class="bottom-nav-item">
+    <span class="nav-icon">🎵</span>
+    <span class="nav-label">Tonos</span>
+  </button>
+  <button role="tab" data-tab="review" aria-selected="false" class="bottom-nav-item">
+    <span class="nav-icon">🧠</span>
+    <span class="nav-label">Repaso</span>
+  </button>
+  <button role="tab" data-tab="progress" aria-selected="false" class="bottom-nav-item">
+    <span class="nav-icon">🏆</span>
+    <span class="nav-label">Progreso</span>
+  </button>
+</nav>
+
 <script type="module" src="/app.js"></script>
 </body>
 </html>

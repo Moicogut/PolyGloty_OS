@@ -95,11 +95,25 @@ Documento de memoria técnica, decisiones arquitectónicas, estado actual del si
 
 ---
 
-## 7. Próximos Pasos Recomendados
+## 8. Arquitectura Móvil y Rediseño UI/UX (Estilo Praktika)
 
-1. **Pruebas de Campo en Dispositivos Móviles**:
-   - Abrir [https://polyglot-voice-jtu6.onrender.com](https://polyglot-voice-jtu6.onrender.com) en iPhone (Safari) y Android (Chrome).
-   - Probar la interacción por voz (botón mantener para hablar y síntesis auditiva).
-   - Probar el módulo de calibración de tonos chinos (Web Worker YIN DSP).
-2. **Monitoreo**:
-   - Supervisar logs de Render en caso de consultas concurrentes o picos de tráfico.
+- **Diseño Responsive 100%**:
+  - Implementación de **Bottom Navigation Bar** nativo en pantallas móviles (`< 768px`) con acceso directo a Tutor, Tonos, Repaso y Progreso.
+  - Header compacto con marca, nivel XP y racha optimizados para pantallas de 360px a 420px sin desbordamiento.
+  - **Tutor Hero Compacto**: Avatar con anillo pulsante `speaking`, badge de estado y controles esenciales (`Empezar` / `Terminar`).
+  - **Acordeón de Objetivos**: Cajón colapsable para que los objetivos del escenario no consuman el área de chat.
+  - **Conversation Dock Unificado**:
+    - Botón de micrófono central de gran tamaño con pulso de grabación.
+    - Selector rápido de idioma de voz (`🗣️ EN` / `🗣️ ES` / `🗣️ ZH`) para evitar que el motor de voz transcriba fonéticamente español en inglés.
+    - Subtítulos de traducción rápidos (`🌐 ES`) y campo de texto fluido.
+- **Corrección de Reconocimiento de Voz**:
+  - Reinicio estricto de buffers en `onstart` (evitando concatenaciones corruptas de turnos previos).
+  - Transcripción reactiva interim en vivo dentro del input.
+  - Manejo defensivo de errores `not-allowed` y `no-speech`.
+- **Limpieza de Síntesis Auditiva**:
+  - Función `cleanTextForSpeech` que elimina pinyin entre paréntesis `(Nǐ hǎo...)`, markdown y caracteres especiales para evitar lecturas deletreadas o robóticas.
+  - Carga asíncrona de voces del sistema con filtro de calidad preferente (`natural`, `online`, `google`).
+- **Resiliencia de Backend (Gemini Multi-Model Fallback)**:
+  - Cascada automática ante saturación (503 / 429): `gemini-2.5-flash` ➔ `gemini-2.0-flash` ➔ `gemini-1.5-flash`.
+  - Tolerancia semántica a transcripciones fonéticas imprecisas en el system prompt.
+

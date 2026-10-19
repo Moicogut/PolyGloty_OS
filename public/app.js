@@ -159,6 +159,37 @@ function updateTutorPersona() {
     : "Mejora tu fluidez y vocabulario con conversación natural.";
 }
 
+// Idioma activo para el micrófono: por defecto el de estudio, con posibilidad de alternar a español
+let speechInputLang = store.get("speech_input_lang", "target"); // 'target' o 'es'
+
+function getSpeechLangCode() {
+  if (speechInputLang === "es") return "es-ES";
+  return lang() === "zh" ? "zh-CN" : "en-US";
+}
+
+function updateSpeechLangToggleUI() {
+  const lbl = $("#speechLangLabel");
+  const icon = $("#speechLangIcon");
+  if (!lbl) return;
+  if (speechInputLang === "es") {
+    lbl.textContent = "ES";
+    if (icon) icon.textContent = "🗣️";
+  } else {
+    lbl.textContent = lang() === "zh" ? "ZH" : "EN";
+    if (icon) icon.textContent = "🎙️";
+  }
+}
+
+$("#speechLangToggleBtn")?.addEventListener("click", () => {
+  speechInputLang = speechInputLang === "target" ? "es" : "target";
+  store.set("speech_input_lang", speechInputLang);
+  updateSpeechLangToggleUI();
+  if (recognition) {
+    recognition.lang = getSpeechLangCode();
+  }
+  toast(`Micrófono configurado en: ${speechInputLang === "es" ? "Español (ES)" : (lang() === "zh" ? "Chino Mandarín (ZH)" : "Inglés (EN)")}`);
+});
+
 // Inicialización de Reconocimiento de Voz nativo (Web Speech API)
 function initSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -169,51 +200,56 @@ function initSpeechRecognition() {
   const rec = new SpeechRecognition();
   rec.continuous = false;
   rec.interimResults = true;
-  rec.lang = lang() === "zh" ? "zh-CN" : "en-US";
+  rec.maxAlternatives = 1;
+
+  let activeTranscript = "";
 
   rec.onstart = () => {
     isRecording = true;
-    $("#mute").classList.add("primary");
-    $("#mute").textContent = "🔴 Escuchando…";
-    $("#voiceBtn")?.classList.add("recording");
-    $("#pulseDot").style.display = "block";
-    status("Te escucho… habla con naturalidad (inglés o español)");
+    activeTranscript = "";
+    if ($("#voiceBtn")) $("#voiceBtn").classList.add("recording");
+    if ($("#pulseDot")) $("#pulseDot").style.display = "block";
+    const langName = speechInputLang === "es" ? "español" : (lang() === "zh" ? "chino mandarín" : "inglés");
+    status(`🔴 Escuchando en ${langName}… habla ahora`);
   };
 
-  let finalTranscript = "";
   rec.onresult = (e) => {
     let interim = "";
-    for (let i = e.resultIndex; i < e.results.length; ++i) {
+    activeTranscript = "";
+    for (let i = 0; i < e.results.length; ++i) {
       if (e.results[i].isFinal) {
-        finalTranscript += e.results[i][0].transcript;
+        activeTranscript += e.results[i][0].transcript;
       } else {
         interim += e.results[i][0].transcript;
       }
     }
-    const current = finalTranscript || interim;
+    const current = (activeTranscript || interim).trim();
     if (current && $("#chatText")) {
       $("#chatText").value = current;
     }
   };
 
   rec.onerror = (e) => {
-    console.warn("Speech error:", e.error);
+    console.warn("Speech recognition error:", e.error);
     isRecording = false;
-    $("#mute").classList.remove("primary");
-    $("#mute").textContent = "🎤 Hablar al micrófono";
-    $("#voiceBtn")?.classList.remove("recording");
-    $("#pulseDot").style.display = "none";
+    if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
+    if ($("#pulseDot")) $("#pulseDot").style.display = "none";
+    if (e.error === "not-allowed") {
+      toast("Permiso de micrófono denegado en el navegador.");
+    } else if (e.error === "no-speech") {
+      status("No se detectó voz. Vuelve a pulsar el micrófono.");
+    }
   };
 
   rec.onend = async () => {
     isRecording = false;
-    $("#mute").classList.remove("primary");
-    $("#mute").textContent = "🎤 Hablar al micrófono";
-    $("#voiceBtn")?.classList.remove("recording");
-    $("#pulseDot").style.display = "none";
+    if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
+    if ($("#pulseDot")) $("#pulseDot").style.display = "none";
+    status(isConnected ? "Listo: habla o escribe tu respuesta" : "Desconectado");
 
-    if (finalTranscript.trim()) {
-      await sendUserTurn(finalTranscript.trim());
+    const textToSend = ($("#chatText")?.value || activeTranscript || "").trim();
+    if (textToSend) {
+      await sendUserTurn(textToSend);
     }
   };
 
@@ -221,17 +257,24 @@ function initSpeechRecognition() {
 }
 
 function toggleRecording() {
-  if (!isConnected) return;
+  if (!isConnected) {
+    toast("Presiona 'Empezar' para iniciar la sesión con tu tutor.");
+    return;
+  }
   if (!recognition) recognition = initSpeechRecognition();
   if (!recognition) {
-    toast("El navegador no soporta reconocimiento de voz nativo. Usa el chat de texto.");
+    toast("Navegador sin soporte de voz. Escribe directamente en el chat.");
     return;
   }
   if (isRecording) {
     recognition.stop();
   } else {
-    recognition.lang = lang() === "zh" ? "zh-CN" : "en-US";
-    recognition.start();
+    recognition.lang = getSpeechLangCode();
+    try {
+      recognition.start();
+    } catch (err) {
+      console.warn("Error al iniciar reconocimiento:", err);
+    }
   }
 }
 
@@ -239,7 +282,7 @@ async function sendUserTurn(rawText) {
   const text = (rawText || "").trim();
   if (!text) return;
   if (!isConnected) {
-    toast("Primero presiona 'Iniciar conversación'.");
+    toast("Primero presiona 'Empezar' para abrir la sesión.");
     return;
   }
 
@@ -301,27 +344,65 @@ async function sendTurnToTutor(userText) {
 }
 
 // Síntesis de voz natural del tutor (SpeechSynthesis)
-function speakVoice(text) {
+let cachedVoices = [];
+function loadSystemVoices() {
   if (!("speechSynthesis" in window)) return;
+  cachedVoices = window.speechSynthesis.getVoices() || [];
+}
+if ("speechSynthesis" in window) {
+  loadSystemVoices();
+  window.speechSynthesis.onvoiceschanged = loadSystemVoices;
+}
+
+function cleanTextForSpeech(raw) {
+  if (!raw) return "";
+  let clean = raw;
+  // 1. Eliminar pinyin o explicaciones entre paréntesis (ej: "(Nǐ hǎo! Hěn gāoxìng...)")
+  clean = clean.replace(/\([A-Za-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ\s,.'!?-]+\)/g, "");
+  // 2. Eliminar notas entre corchetes
+  clean = clean.replace(/\[.*?\]/g, "");
+  // 3. Eliminar asteriscos markdown
+  clean = clean.replace(/\*+/g, "");
+  // 4. Eliminar emojis
+  clean = clean.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "");
+  return clean.trim();
+}
+
+function speakVoice(text) {
+  if (!("speechSynthesis" in window) || !text) return;
   window.speechSynthesis.cancel();
 
-  // Limpiar texto de pinyin o marcas si están entre corchetes
-  const clean = text.replace(/\[.*?\]/g, "");
-  const ut = new SpeechSynthesisUtterance(clean);
-  ut.lang = lang() === "zh" ? "zh-CN" : "en-US";
-  ut.rate = 0.95;
+  const clean = cleanTextForSpeech(text);
+  if (!clean) return;
 
-  const voices = window.speechSynthesis.getVoices();
-  const matchedVoice = voices.find((v) => v.lang.startsWith(lang() === "zh" ? "zh" : "en"));
-  if (matchedVoice) ut.voice = matchedVoice;
+  const ut = new SpeechSynthesisUtterance(clean);
+  const targetLang = lang();
+  ut.lang = targetLang === "zh" ? "zh-CN" : "en-US";
+  ut.rate = targetLang === "zh" ? 0.90 : 0.95;
+  ut.pitch = 1.0;
+
+  if (!cachedVoices.length) loadSystemVoices();
+
+  // Buscar preferentemente voces naturales / mejor calidad
+  const langPrefix = targetLang === "zh" ? "zh" : "en";
+  const candidates = cachedVoices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix));
+  const premiumVoice = candidates.find((v) => /natural|premium|online|google|samantha|karen|tingting/i.test(v.name)) || candidates[0];
+  if (premiumVoice) ut.voice = premiumVoice;
 
   ut.onstart = () => {
-    $("#avatarIcon").classList.add("speaking");
-    $("#tutorBadge").textContent = "Hablando…";
+    $("#avatarIcon")?.classList.add("speaking");
+    const badge = $("#tutorBadge");
+    if (badge) badge.textContent = "Hablando…";
   };
   ut.onend = () => {
-    $("#avatarIcon").classList.remove("speaking");
-    $("#tutorBadge").textContent = "Escuchando";
+    $("#avatarIcon")?.classList.remove("speaking");
+    const badge = $("#tutorBadge");
+    if (badge) badge.textContent = isConnected ? "Escuchando" : "Listo";
+  };
+  ut.onerror = () => {
+    $("#avatarIcon")?.classList.remove("speaking");
+    const badge = $("#tutorBadge");
+    if (badge) badge.textContent = isConnected ? "Listo" : "Desconectado";
   };
 
   window.speechSynthesis.speak(ut);
@@ -395,13 +476,12 @@ function hangup() {
     try { recognition.abort(); } catch {}
   }
   $("#connect").disabled = false;
-  $("#mute").disabled = true;
+  if ($("#mute")) $("#mute").disabled = true;
   $("#hangup").disabled = true;
   if ($("#chatText")) { $("#chatText").disabled = true; $("#chatText").value = ""; }
   if ($("#sendBtn")) $("#sendBtn").disabled = true;
   if ($("#voiceBtn")) $("#voiceBtn").disabled = true;
-  $("#mute").textContent = "🎤 Hablar al micrófono";
-  $("#pulseDot").style.display = "none";
+  if ($("#pulseDot")) $("#pulseDot").style.display = "none";
   $("#tutorBadge").textContent = "Desconectado";
   status("Desconectado");
 
@@ -420,7 +500,7 @@ function hangup() {
 
 $("#connect").addEventListener("click", connect);
 $("#hangup").addEventListener("click", hangup);
-$("#mute").addEventListener("click", toggleRecording);
+$("#mute")?.addEventListener("click", toggleRecording);
 $("#voiceBtn")?.addEventListener("click", toggleRecording);
 $("#sendBtn")?.addEventListener("click", () => sendUserTurn($("#chatText").value));
 $("#chatText")?.addEventListener("keydown", (e) => {
@@ -428,6 +508,12 @@ $("#chatText")?.addEventListener("keydown", (e) => {
     e.preventDefault();
     sendUserTurn($("#chatText").value);
   }
+});
+
+// Toggle del cajón de objetivos
+$("#toggleObjsBtn")?.addEventListener("click", () => {
+  const drawer = $("#objsDrawer");
+  if (drawer) drawer.classList.toggle("collapsed");
 });
 
 // ---------------------------------------------------------------- tonos
@@ -900,17 +986,22 @@ function paintProgress() {
   renderCompetencies();
 }
 
-// ---------------------------------------------------------------- tabs
-document.querySelectorAll(".tabs button").forEach((b) => {
-  b.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", "false"));
-    b.setAttribute("aria-selected", "true");
-    const t = b.dataset.tab;
-    document.querySelectorAll("main section").forEach((s) => (s.hidden = s.id !== t));
-    if (t === "review") loadReview();
-    if (t === "tones") loadDrills();
-    if (t === "progress") paintProgress();
+// ---------------------------------------------------------------- tabs & bottom nav
+function switchTab(t) {
+  document.querySelectorAll(".tabs button, .bottom-nav button").forEach((x) => {
+    const isSelected = x.dataset.tab === t;
+    x.setAttribute("aria-selected", isSelected ? "true" : "false");
+    if (isSelected) x.classList.add("active");
+    else x.classList.remove("active");
   });
+  document.querySelectorAll("main section").forEach((s) => (s.hidden = s.id !== t));
+  if (t === "review") loadReview();
+  if (t === "tones") loadDrills();
+  if (t === "progress") paintProgress();
+}
+
+document.querySelectorAll(".tabs button, .bottom-nav button").forEach((b) => {
+  b.addEventListener("click", () => switchTab(b.dataset.tab));
 });
 
 async function refresh() {

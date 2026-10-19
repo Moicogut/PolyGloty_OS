@@ -247,28 +247,45 @@ const routes = {
       model: GEMINI_MODEL,
     });
 
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${key}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: cfg.systemInstruction }] },
-          contents: geminiContents,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 600,
-          },
-        }),
-        signal: AbortSignal.timeout(10000),
-      });
+    const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    let rawText = "";
+    let lastError = null;
 
-      const data = await response.json();
-      if (!response.ok) {
-        logger.error("gemini_chat_error", { status: response.status, data }, state.tenantId);
-        return send(res, response.status, { error: data.error?.message || "Error en Gemini API" });
+    try {
+      for (const candModel of candidateModels) {
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${candModel}:generateContent?key=${key}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: cfg.systemInstruction }] },
+              contents: geminiContents,
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 600,
+              },
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+
+          const data = await response.json();
+          if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+            rawText = data.candidates[0].content.parts[0].text;
+            break;
+          }
+          lastError = data.error?.message || `Status ${response.status}`;
+          logger.warn("gemini_model_retry", { model: candModel, status: response.status, error: lastError }, state.tenantId);
+        } catch (err) {
+          lastError = err.message;
+          logger.warn("gemini_fetch_retry", { model: candModel, error: err.message }, state.tenantId);
+        }
       }
 
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (!rawText) {
+        logger.error("gemini_all_models_failed", { error: lastError }, state.tenantId);
+        return send(res, 503, { error: `Gemini temporalmente no disponible: ${lastError || "Servidores ocupados"}` });
+      }
+
       let parsed = { reply: rawText, translation: "", vocabulary: [], feedback: null };
       try {
         parsed = JSON.parse(rawText);
