@@ -35,28 +35,110 @@
 }
 
 [data-theme="light"] {
-  --bg-base: #f1f5f9;
+  --bg-base: #f8fafc;
   --bg-surface: #ffffff;
-  --bg-card: #f8fafc;
-  --bg-input: #e2e8f0;
+  --bg-card: #ffffff;
+  --bg-input: #f1f5f9;
   
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-light: rgba(79, 70, 229, 0.12);
+  --primary: #4338ca;
+  --primary-hover: #3730a3;
+  --primary-light: rgba(67, 56, 202, 0.12);
   
-  --secondary: #0284c7;
-  --secondary-glow: rgba(2, 132, 199, 0.15);
+  --secondary: #0369a1;
+  --secondary-glow: rgba(3, 105, 161, 0.18);
   
   --text-main: #0f172a;
-  --text-muted: #475569;
-  --text-dim: #64748b;
+  --text-muted: #334155;
+  --text-dim: #475569;
   
-  --border-subtle: rgba(15, 23, 42, 0.10);
-  --border-focus: rgba(79, 70, 229, 0.40);
+  --border-subtle: #cbd5e1;
+  --border-focus: #4338ca;
   
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.10);
-  --shadow-glow: 0 0 16px rgba(79, 70, 229, 0.20);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-glow: 0 0 16px rgba(67, 56, 202, 0.15);
+}
+
+[data-theme="light"] .msg-trans {
+  color: #334155;
+  border-top-color: #e2e8f0;
+}
+
+[data-theme="light"] .msg-tip {
+  color: #854d0e;
+  background: #fef9c3;
+  border: 1px solid #fde047;
+}
+
+[data-theme="light"] .msg-action-btn {
+  color: #4338ca;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+}
+
+[data-theme="light"] .msg-action-btn:hover {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+[data-theme="light"] .b.ai {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="light"] .b.me {
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  color: #ffffff;
+}
+
+[data-theme="light"] .trans-tag {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+[data-theme="light"] .bottom-nav {
+  background: rgba(255, 255, 255, 0.96);
+  border-top-color: #e2e8f0;
+}
+
+[data-theme="light"] .bottom-nav-item {
+  color: #64748b;
+}
+
+[data-theme="light"] .bottom-nav-item.active {
+  color: #4338ca;
+}
+
+[data-theme="light"] .conversation-dock {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .dock-input-wrap input {
+  color: #0f172a;
+}
+
+[data-theme="light"] .dock-pill-btn {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+[data-theme="light"] .tutor-hero {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .vocab-drawer,
+[data-theme="light"] .objs-drawer {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .vocab-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
 }
 
 * {

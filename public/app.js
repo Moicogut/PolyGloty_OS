@@ -384,11 +384,19 @@ function cleanTextForSpeech(raw) {
 function speakVoice(text) {
   if (!("speechSynthesis" in window) || !text) return;
 
-  // En Android y Chrome, speechSynthesis puede pausarse si el usuario no ha interactuado
-  if (window.speechSynthesis.paused) {
-    window.speechSynthesis.resume();
+  const synth = window.speechSynthesis;
+
+  // En PC (Chrome / Windows) speechSynthesis puede quedar en estado encolado o pausado
+  try {
+    if (synth.speaking || synth.pending) {
+      synth.cancel();
+    }
+    if (synth.paused) {
+      synth.resume();
+    }
+  } catch (e) {
+    console.warn("Speech cancel error:", e);
   }
-  window.speechSynthesis.cancel();
 
   const clean = cleanTextForSpeech(text);
   if (!clean) return;
@@ -399,12 +407,16 @@ function speakVoice(text) {
   ut.rate = targetLang === "zh" ? 0.90 : 0.95;
   ut.pitch = 1.0;
 
-  if (!cachedVoices.length) loadSystemVoices();
-
-  const langPrefix = targetLang === "zh" ? "zh" : "en";
-  const candidates = cachedVoices.filter((v) => v.lang && v.lang.toLowerCase().startsWith(langPrefix));
-  const premiumVoice = candidates.find((v) => /natural|premium|online|google|samantha|karen|tingting/i.test(v.name)) || candidates[0];
-  if (premiumVoice) ut.voice = premiumVoice;
+  const voices = synth.getVoices() || cachedVoices;
+  if (voices && voices.length > 0) {
+    const langPrefix = targetLang === "zh" ? "zh" : "en";
+    const candidates = voices.filter((v) => v.lang && v.lang.toLowerCase().replace("_", "-").startsWith(langPrefix));
+    const premiumVoice = candidates.find((v) => /natural|premium|online|google|david|zira|george|samantha|karen|tingting/i.test(v.name)) || candidates[0];
+    if (premiumVoice) {
+      ut.voice = premiumVoice;
+      ut.lang = premiumVoice.lang;
+    }
+  }
 
   ut.onstart = () => {
     $("#avatarIcon")?.classList.add("speaking");
@@ -423,11 +435,17 @@ function speakVoice(text) {
     if (badge) badge.textContent = isConnected ? "Listo" : "Desconectado";
   };
 
-  // Timeout para evitar que Chrome/Android congele speech synthesis
-  window.speechSynthesis.speak(ut);
-  if (window.speechSynthesis.paused) {
-    window.speechSynthesis.resume();
-  }
+  // En Chrome Windows, una ejecución diferida de 10ms previene que la utterance sea silenciada por el GC
+  setTimeout(() => {
+    try {
+      synth.speak(ut);
+      if (synth.paused) {
+        synth.resume();
+      }
+    } catch (err) {
+      console.warn("Fallo al reproducir utterance:", err);
+    }
+  }, 10);
 }
 
 function checkMissionProgress(userText) {
