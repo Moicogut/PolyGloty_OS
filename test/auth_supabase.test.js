@@ -49,4 +49,24 @@ test("SupabaseAdapter: registro, hashing de contraseñas y login local defensivo
   const updatedStore = repo.getStore(user.id);
   assert.equal(updatedStore.data.conversations.length, 1);
   assert.equal(updatedStore.data.conversations[0].turns.length, 2);
+
+  // 7. Prueba obligatoria: 3 tipos de correo (Gmail, Outlook y corporativo)
+  const testEmails = [
+    { email: "estudiante.apex@gmail.com", domain: "Gmail" },
+    { email: "alumno.polyglot@outlook.com", domain: "Outlook" },
+    { email: "director.idiomas@empresa-tech.com", domain: "Corporativo" },
+  ];
+
+  for (const item of testEmails) {
+    const reg = await adapter.register({ email: item.email, password: "SecurePassword2026!" });
+    assert.equal(reg.email, item.email, `Registro exitoso para dominio ${item.domain}`);
+
+    const log = await adapter.login({ email: item.email, password: "SecurePassword2026!" });
+    assert.equal(log.email, item.email, `Login exitoso para dominio ${item.domain}`);
+
+    const rec = await adapter.recoverPassword({ email: item.email });
+    assert.equal(rec.ok, true, `Recuperación de contraseña para dominio ${item.domain}`);
+    assert.ok(rec.message.includes("instrucciones") || rec.message.includes("enlace"));
+  }
 });
+

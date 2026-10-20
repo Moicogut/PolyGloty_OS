@@ -285,19 +285,25 @@
       </div>
 
       <form id="authForm" style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
-        <label>Correo Electrónico o Usuario
-          <input id="authEmail" type="text" placeholder="nombre@correo.com" required autocomplete="username">
+        <label>Correo Electrónico
+          <input id="authEmail" type="email" placeholder="nombre@correo.com" required autocomplete="username">
         </label>
-        <label>Contraseña
-          <input id="authPassword" type="password" placeholder="Tu contraseña" required autocomplete="current-password">
-        </label>
+        <div id="authPasswordFieldWrap">
+          <label>Contraseña
+            <input id="authPassword" type="password" placeholder="Tu contraseña" required autocomplete="current-password">
+          </label>
+        </div>
         <div id="authError" class="muted small danger" style="min-height: 18px;"></div>
         <button id="authSubmitBtn" type="submit" class="primary" style="margin-top: 6px;">
           Ingresar
         </button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <button id="forgotPasswordBtn" type="button" class="link-vocab-btn small" style="padding: 0;">¿Olvidaste tu contraseña?</button>
+          <button id="backToLoginBtn" type="button" class="link-vocab-btn small" style="padding: 0;" hidden>Volver a inicio de sesión</button>
+        </div>
       </form>
       <p class="muted small" style="margin-top: 14px; text-align: center;">
-        Conectado a la base de datos Supabase / Multi-tenant para almacenar tu progreso en tiempo real.
+        Tu progreso se guarda automáticamente.
       </p>
     </div>
   </div>

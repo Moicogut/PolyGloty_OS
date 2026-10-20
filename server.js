@@ -93,7 +93,7 @@ const routes = {
       logger.info("user_registered", { email: user.email, provider: user.provider }, user.id);
       send(res, 200, user);
     } catch (err) {
-      send(res, 400, { error: err.message });
+      send(res, 400, { error: err.message || "No pudimos crear tu cuenta. Intenta nuevamente." });
     }
   },
 
@@ -104,7 +104,18 @@ const routes = {
       logger.info("user_logged_in", { email: user.email, provider: user.provider }, user.id);
       send(res, 200, user);
     } catch (err) {
-      send(res, 400, { error: err.message });
+      send(res, 400, { error: err.message || "Correo o contraseña incorrectos." });
+    }
+  },
+
+  "POST /api/auth/reset-password": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const result = await supabase.recoverPassword(b);
+      logger.info("password_recovery_requested", { email: b.email }, "auth");
+      send(res, 200, result);
+    } catch (err) {
+      send(res, 400, { error: err.message || "No pudimos procesar la recuperación de contraseña." });
     }
   },
 

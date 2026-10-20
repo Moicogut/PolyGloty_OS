@@ -1185,6 +1185,136 @@ async function init() {
     }
   });
 
+  // Eventos del Modal de Autenticación y Cuentas
+  let authMode = "login"; // "login" | "register" | "recover"
+
+  function updateAuthModalUI() {
+    const loggedInView = $("#authLoggedInView");
+    const loggedOutView = $("#authLoggedOutView");
+    const title = $("#authModalTitle");
+    const err = $("#authError");
+    if (err) err.textContent = "";
+
+    if (currentUser?.email) {
+      if (loggedInView) loggedInView.hidden = false;
+      if (loggedOutView) loggedOutView.hidden = true;
+      if (title) title.textContent = "Mi Cuenta";
+      const userProfileEmail = $("#userProfileEmail");
+      const userProfileId = $("#userProfileId");
+      if (userProfileEmail) userProfileEmail.textContent = currentUser.email;
+      if (userProfileId) userProfileId.textContent = `ID de Alumno: ${currentUser.id}`;
+    } else {
+      if (loggedInView) loggedInView.hidden = true;
+      if (loggedOutView) loggedOutView.hidden = false;
+      const tabLogin = $("#tabLogin");
+      const tabRegister = $("#tabRegister");
+      const pwdWrap = $("#authPasswordFieldWrap");
+      const pwdInput = $("#authPassword");
+      const submitBtn = $("#authSubmitBtn");
+      const forgotBtn = $("#forgotPasswordBtn");
+      const backBtn = $("#backToLoginBtn");
+
+      if (authMode === "recover") {
+        if (title) title.textContent = "Recuperar Contraseña";
+        if (tabLogin) tabLogin.parentElement.hidden = true;
+        if (pwdWrap) pwdWrap.hidden = true;
+        if (pwdInput) pwdInput.removeAttribute("required");
+        if (submitBtn) submitBtn.textContent = "Enviar enlace de recuperación";
+        if (forgotBtn) forgotBtn.hidden = true;
+        if (backBtn) backBtn.hidden = false;
+      } else {
+        if (tabLogin) tabLogin.parentElement.hidden = false;
+        if (pwdWrap) pwdWrap.hidden = false;
+        if (pwdInput) pwdInput.setAttribute("required", "true");
+        if (forgotBtn) forgotBtn.hidden = false;
+        if (backBtn) backBtn.hidden = true;
+
+        if (authMode === "register") {
+          if (title) title.textContent = "Crear Cuenta";
+          tabLogin?.classList.remove("active");
+          tabRegister?.classList.add("active");
+          if (submitBtn) submitBtn.textContent = "Registrarme";
+        } else {
+          if (title) title.textContent = "Iniciar Sesión";
+          tabLogin?.classList.add("active");
+          tabRegister?.classList.remove("active");
+          if (submitBtn) submitBtn.textContent = "Ingresar";
+        }
+      }
+    }
+  }
+
+  $("#authBtn")?.addEventListener("click", () => {
+    updateAuthModalUI();
+    const modal = $("#authModal");
+    if (modal) modal.hidden = false;
+  });
+
+  $("#closeAuthModal")?.addEventListener("click", () => {
+    const modal = $("#authModal");
+    if (modal) modal.hidden = true;
+  });
+
+  $("#tabLogin")?.addEventListener("click", () => {
+    authMode = "login";
+    updateAuthModalUI();
+  });
+
+  $("#tabRegister")?.addEventListener("click", () => {
+    authMode = "register";
+    updateAuthModalUI();
+  });
+
+  $("#forgotPasswordBtn")?.addEventListener("click", () => {
+    authMode = "recover";
+    updateAuthModalUI();
+  });
+
+  $("#backToLoginBtn")?.addEventListener("click", () => {
+    authMode = "login";
+    updateAuthModalUI();
+  });
+
+  $("#authForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = ($("#authEmail")?.value || "").trim();
+    const password = $("#authPassword")?.value || "";
+    const errEl = $("#authError");
+    if (errEl) errEl.textContent = "";
+
+    try {
+      if (authMode === "recover") {
+        const res = await post("/api/auth/reset-password", { email });
+        toast(res.message || "Enlace enviado a tu correo.");
+        authMode = "login";
+        updateAuthModalUI();
+        return;
+      }
+
+      const endpoint = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+      const user = await post(endpoint, { email, password });
+      currentUser = user;
+      store.set("polyglot_user", JSON.stringify(user));
+      toast(`¡Bienvenido, ${user.email}!`);
+      const modal = $("#authModal");
+      if (modal) modal.hidden = true;
+      paint();
+      await refresh();
+    } catch (err) {
+      if (errEl) errEl.textContent = err.message || "Ocurrió un error al procesar tu solicitud.";
+    }
+  });
+
+  $("#logoutBtn")?.addEventListener("click", async () => {
+    currentUser = null;
+    try { localStorage.removeItem("polyglot_user"); } catch {}
+    toast("Sesión cerrada.");
+    const modal = $("#authModal");
+    if (modal) modal.hidden = true;
+    paint();
+    await refresh();
+  });
+
   window.speechSynthesis?.getVoices();
 }
 
