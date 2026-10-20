@@ -29,6 +29,15 @@ const VOICE = process.env.REALTIME_VOICE || "marin";
 const GEMINI_MODEL = VOICE_MODEL.startsWith("models/") ? VOICE_MODEL : `models/${VOICE_MODEL}`;
 const repo = new TenantRepository(path.join(ROOT, "data"));
 const supabase = new SupabaseAdapter({ tenantRepo: repo });
+
+// En producción, es estrictamente obligatorio tener configurado Supabase para persistencia multi-tenant
+if (process.env.NODE_ENV === "production" && !supabase.isConfigured) {
+  const errMsg = "FATAL: En NODE_ENV=production se requiere configurar SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY (o SUPABASE_KEY). El servidor se niega a iniciar para evitar pérdida de datos o caída silenciosa a data/state.json.";
+  logger.error("missing_production_supabase", { error: errMsg });
+  console.error(errMsg);
+  process.exit(1);
+}
+
 // Rate limiter: Máximo de solicitudes por minuto por cliente (usa user_id si está autenticado, sino IP)
 const sessionLimiter = new RateLimiter({ windowMs: 60_000, maxRequests: Number(process.env.MAX_SESSIONS_PER_MIN || 15) });
 // User Usage Limiter: control por minuto (máx 15 turnos) y cuota diaria configurable guardada en Supabase (por defecto 30 minutos)
