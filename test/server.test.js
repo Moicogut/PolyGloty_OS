@@ -9,13 +9,30 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+async function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer();
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address();
+      srv.close((err) => (err ? reject(err) : resolve(port)));
+    });
+  });
+}
+
 async function start(env) {
   // copia aislada del proyecto para no tocar data/state.json real
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pvsrv-"));
   fs.cpSync(root, dir, { recursive: true, filter: (s) => !s.includes("node_modules") && !s.endsWith("state.json") && !s.endsWith(".env") });
-  const port = 3900 + Math.floor(Math.random() * 500);
-  const p = spawn("node", ["server.js"], { cwd: dir, env: { ...process.env, PORT: String(port), ...env }, stdio: "ignore" });
-  for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${port}/api/state`); break; } catch { await wait(100); } }
+  const port = await getFreePort();
+  const p = spawn("node", ["server.js"], { cwd: dir, env: { ...process.env, PORT: String(port), HOST: "127.0.0.1", NODE_ENV: "development", ...env }, stdio: "ignore" });
+  for (let i = 0; i < 50; i++) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/api/state`);
+      if (res.ok) break;
+    } catch {
+      await wait(100);
+    }
+  }
   return { base: `http://127.0.0.1:${port}`, host: `127.0.0.1:${port}`, stop: () => p.kill() };
 }
 const J = (base, p, body, headers = {}) => fetch(base + p, { method: "POST", headers: { "Content-Type": "application/json", Origin: base, ...headers }, body: JSON.stringify(body ?? {}) });
