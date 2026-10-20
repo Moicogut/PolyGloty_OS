@@ -211,8 +211,24 @@ En esta entrega se cerraron y verificaron con evidencia real las tareas pendient
    - Creado `scripts/latency-report.js` que procesa logs estructurados reales (`data/latency_logs.jsonl`) calculando promedio, p50 y p90 sin generar datos sintéticos.
    - `lib/logger.js` adaptado para guardar los logs de forma persistente. Reporta `NO VERIFICADO` de forma fiel ante la falta de logs de turnos en dispositivos móviles.
 
-### 13.2 Métricas Finales
+### 13.2 Estado de Pasos Humanos (Verificados vs Pendientes)
+- ✅ **Paso Humano 1 (C1): Ejecutado exitosamente en Supabase SQL Editor**.
+  - Evidencia: Captura de pantalla de consulta SQL ejecutada en proyecto `jszkayddqctusgmcwyzi` con salida `Success. No rows returned` para `001_rls_por_usuario.sql`.
+- ✅ **Paso Humano 2 (C2): Ejecutado exitosamente en Supabase SQL Editor**.
+  - Evidencia: Captura de pantalla de consulta SQL ejecutada con salida `Success. No rows returned` para `003_uso_diario.sql` (creada tabla `user_usage` con RLS).
+- ✅ **Paso Humano 3 (C7 - Configuración URLs): Ejecutado exitosamente en Supabase Dashboard**.
+  - Evidencia: Captura de pantalla en `Authentication -> URL Configuration`: `Site URL` y `Redirect URLs` configuradas con `https://polyglot-voice-jtu6.onrender.com/`.
+- ⏳ **Paso Humano 3 (C7 - Envío de Correos): Pendiente tras la pausa**.
+  - Probar recuperación de contraseña de punta a punta con 3 correos reales (Gmail, Outlook, corporativo).
+- ⏳ **Paso Humano 4 (C5 - Modelo en Vivo): Pendiente tras la pausa**.
+  - Re-evaluar saldo/cuota activa en Gemini/OpenAI para ejecución limpia de `node scripts/smoke.js`.
+- ⏳ **Paso Humano 5 (C6 - Latencia Móvil): Pendiente tras la pausa**.
+  - Ejecutar 20 turnos en celular real (Chrome Android y Safari iOS) y correr `node scripts/latency-report.js`.
+
+### 13.3 Métricas Finales
 - Suite de tests: **47 pasando, 0 fallos, 1 omitido defensivamente (48 totales)** en `npm test`.
+- Rama: `fix/parte-1c`.
+
 
 
 
