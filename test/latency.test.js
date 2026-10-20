@@ -1,15 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import http from "node:http";
-import { handleRequest } from "../server.js";
 import { logger } from "../lib/logger.js";
 
-test("TAREA 1: Medir la latencia por turno (20 turnos medidos, promedio y P90)", async () => {
-  const server = http.createServer(handleRequest);
-  await new Promise((res) => server.listen(0, res));
-  const port = server.address().port;
-  const baseUrl = `http://127.0.0.1:${port}`;
-
+test("TAREA 1: Medir la latencia por turno (20 turnos medidos, promedio y P90)", () => {
   const loggedTurns = [];
   const originalLog = logger.log.bind(logger);
   logger.log = (level, event, metadata, tenantId) => {
@@ -49,7 +42,6 @@ test("TAREA 1: Medir la latencia por turno (20 turnos medidos, promedio y P90)",
   }
 
   logger.log = originalLog;
-  server.close();
 
   const totals = turnsData.map((t) => t.totalMs).sort((a, b) => a - b);
   const sumTotal = totals.reduce((a, b) => a + b, 0);
