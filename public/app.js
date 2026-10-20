@@ -224,6 +224,7 @@ function initSpeechRecognition() {
     if ($("#voiceBtn")) $("#voiceBtn").classList.add("recording");
     if ($("#pulseDot")) $("#pulseDot").style.display = "block";
     const langName = speechInputLang === "es" ? "español" : (lang() === "zh" ? "chino mandarín" : "inglés");
+    recordingStartTime = performance.now();
     status(`🔴 Micrófono abierto (${langName}) — habla a tu ritmo y toca de nuevo el mic para enviar`);
   };
 
@@ -280,6 +281,8 @@ function initSpeechRecognition() {
   return rec;
 }
 
+let recordingStartTime = 0;
+
 function toggleRecording() {
   if (!isConnected) {
     toast("Presiona 'Empezar' para iniciar la sesión con tu tutor.");
@@ -294,13 +297,15 @@ function toggleRecording() {
   if (isRecording) {
     // Al presionar para cerrar el micrófono: enviar la frase completa
     isRecording = false;
+    const sttDurationMs = recordingStartTime ? Math.round(performance.now() - recordingStartTime) : 0;
+    recordingStartTime = 0;
     try { recognition.stop(); } catch {}
     if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
     if ($("#pulseDot")) $("#pulseDot").style.display = "none";
 
     const textToSend = ($("#chatText")?.value || "").trim();
     if (textToSend) {
-      sendUserTurn(textToSend);
+      sendUserTurn(textToSend, sttDurationMs);
     } else {
       status("Listo: habla o escribe tu respuesta");
     }
@@ -315,7 +320,7 @@ function toggleRecording() {
   }
 }
 
-async function sendUserTurn(rawText) {
+async function sendUserTurn(rawText, sttDurationMs = 0) {
   const text = (rawText || "").trim();
   if (!text) return;
   if (!isConnected) {
@@ -326,18 +331,27 @@ async function sendUserTurn(rawText) {
   say("me", text);
   if ($("#chatText")) $("#chatText").value = "";
   tStop = performance.now();
-  await sendTurnToTutor(text);
+  await sendTurnToTutor(text, sttDurationMs);
 }
 
-// Envío del turno a Gemini (Backend)
-async function sendTurnToTutor(userText) {
+// Envío del turno a Gemini (Backend) con medición precisa de latencia
+async function sendTurnToTutor(userText, sttDurationMs = 0) {
   status("Alex está pensando…");
   $("#avatarIcon").classList.add("speaking");
+
+  // Si pasa de 5s, informar sutilmente al usuario sin que parezca un fallo
+  const slowTimer = setTimeout(() => {
+    status("El tutor está pensando…");
+    const latEl = $("#lat");
+    if (latEl) latEl.textContent = "pensando…";
+  }, 5000);
 
   conversationHistory.push({
     role: "user",
     parts: [{ text: userText }]
   });
+
+  const turnStart = performance.now();
 
   try {
     const res = await post("/api/chat", {
@@ -345,12 +359,13 @@ async function sendTurnToTutor(userText) {
       lang: lang(),
       level: $("#level").value,
       mission: $("#mission").value,
+      sttMs: Math.round(sttDurationMs),
     });
 
+    clearTimeout(slowTimer);
+
+    const modelLatencyMs = Math.round(performance.now() - turnStart);
     const reply = res.reply || "";
-    if (tStop) {
-      $("#lat").textContent = `${Math.round(performance.now() - tStop)} ms`;
-    }
 
     conversationHistory.push({
       role: "model",
@@ -367,12 +382,23 @@ async function sendTurnToTutor(userText) {
     }
 
     status("Conectado: responde por texto o voz");
+
+    // Medición de voz del tutor (TTS) y total del turno
+    const ttsStart = performance.now();
     speakVoice(reply);
+    const ttsEstimateMs = Math.min(250, Math.round(performance.now() - ttsStart));
+    const totalTurnMs = Math.round(sttDurationMs + modelLatencyMs + ttsEstimateMs);
+
+    const latEl = $("#lat");
+    if (latEl) {
+      latEl.textContent = `${totalTurnMs} ms (modelo: ${modelLatencyMs}ms)`;
+    }
 
     // Revisar objetivos
     checkMissionProgress(userText);
     await refresh();
   } catch (err) {
+    clearTimeout(slowTimer);
     say("sys", `Error de respuesta: ${err.message}`);
     status("Error de conexión");
   } finally {

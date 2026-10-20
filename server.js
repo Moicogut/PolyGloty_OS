@@ -256,6 +256,7 @@ const routes = {
     ].filter(Boolean);
     let rawText = "";
     let lastError = null;
+    const modelStart = Date.now();
 
     try {
       for (const candModel of candidateModels) {
@@ -367,6 +368,16 @@ const routes = {
       const xp = award(state, 8);
       state.save();
 
+      const modelMs = Date.now() - modelStart;
+      const clientSttMs = Number(b.sttMs) || 0;
+      logger.logTurnLatency({
+        sttMs: clientSttMs,
+        modelMs,
+        ttsMs: 0,
+        totalMs: clientSttMs + modelMs,
+        lang: langCode,
+      }, state.tenantId);
+
       return send(res, 200, {
         reply: parsed.reply || "",
         translation: parsed.translation || "",
@@ -374,6 +385,10 @@ const routes = {
         feedback: parsed.feedback || null,
         competencies: state.data.competencies,
         xp,
+        latency: {
+          modelMs,
+          sttMs: clientSttMs,
+        },
       });
     } catch (err) {
       logger.error("gemini_chat_exception", { error: err.message }, state.tenantId);
@@ -462,7 +477,7 @@ const routes = {
   },
 };
 
-const server = http.createServer(async (req, res) => {
+export async function handleRequest(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const key = `${req.method} ${url.pathname}`;
@@ -481,10 +496,15 @@ const server = http.createServer(async (req, res) => {
     console.error(e);
     if (!res.headersSent) send(res, 500, { error: e.message });
   }
-});
+}
+
+export const server = http.createServer(handleRequest);
 
 const HOST = process.env.HOST || "0.0.0.0";
-server.listen(PORT, HOST, () => {
-  console.log(`Polyglot Voice en http://${HOST}:${PORT}  (modelo: ${MODEL})`);
-  if (!process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY) console.log("Aviso: sin API keys solo funcionan los tonos y el repaso.");
-});
+if (process.env.NODE_ENV !== "test" && !process.env.TEST_MODE) {
+  server.listen(PORT, HOST, () => {
+    console.log(`Polyglot Voice en http://${HOST}:${PORT}  (modelo: ${MODEL})`);
+    if (!process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY) console.log("Aviso: sin API keys solo funcionan los tonos y el repaso.");
+  });
+}
+
