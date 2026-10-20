@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 import { openStore, TenantRepository, sanitizeTenantId } from "./lib/store.js";
 import { buildSession, buildGeminiSession, runTool, snapshot, MISSIONS, LANGS, award } from "./lib/tutor.js";
 import { schedule, dueQueue, preview, gradeFromTone } from "./lib/srs.js";
-import { validateGradePayload, validateDrillPayload, validateToolPayload, ValidationError } from "./lib/validator.js";
+import { validateGradePayload, validateDrillPayload, validateToolPayload, validateChatPayload, ValidationError } from "./lib/validator.js";
 import { logger } from "./lib/logger.js";
-import { RateLimiter } from "./lib/limiter.js";
+import { RateLimiter, UserUsageLimiter } from "./lib/limiter.js";
 import { SupabaseAdapter } from "./lib/supabase.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -29,6 +29,11 @@ const repo = new TenantRepository(path.join(ROOT, "data"));
 const supabase = new SupabaseAdapter({ tenantRepo: repo });
 // Rate limiter: Máximo 15 ofertas SDP por minuto por cliente/IP
 const sessionLimiter = new RateLimiter({ windowMs: 60_000, maxRequests: Number(process.env.MAX_SESSIONS_PER_MIN || 15) });
+// User Usage Limiter: control por minuto (máx 15 turnos) y cuota diaria (30 minutos de conversación)
+const userUsageLimiter = new UserUsageLimiter({
+  maxTurnsPerMinute: Number(process.env.MAX_TURNS_PER_MIN || 15),
+  maxDailySeconds: Number(process.env.MAX_DAILY_SECONDS || 30 * 60),
+});
 
 const getClientIp = (req) => {
   const forwarded = req.headers["x-forwarded-for"];
@@ -241,23 +246,36 @@ const routes = {
   "POST /api/chat": async (req, res, url) => {
     const key = process.env.GEMINI_API_KEY;
     if (!key) return send(res, 503, { error: "Falta GEMINI_API_KEY en el archivo .env" });
-    const b = await json(req);
-    const state = resolveTenantStore(req, url);
-    const langCode = lang(b.lang);
-    let geminiContents = [];
-    if (Array.isArray(b.messages) && b.messages.length > 0) {
-      geminiContents = b.messages.map((m) => {
-        if (m.parts && Array.isArray(m.parts)) return m;
-        return {
-          role: m.role === "assistant" || m.role === "model" ? "model" : "user",
-          parts: [{ text: String(m.content || m.text || "") }],
-        };
-      });
-    } else if (b.message) {
-      geminiContents = [{ role: "user", parts: [{ text: String(b.message) }] }];
-    } else {
-      geminiContents = [{ role: "user", parts: [{ text: langCode === "zh" ? "你好，我们开始练习吧！" : "Hello! Let's start the conversation." }] }];
+
+    let b;
+    try {
+      b = validateChatPayload(await json(req));
+    } catch (err) {
+      return send(res, 400, { error: err.message });
     }
+
+    const state = resolveTenantStore(req, url);
+
+    // Verificación de límites por usuario (turnos por minuto y cuota diaria de 30 minutos)
+    const limitCheck = userUsageLimiter.checkAndTrackTurn(state.tenantId);
+    if (!limitCheck.allowed) {
+      logger.warn("user_quota_exceeded", { reason: limitCheck.reason, tenantId: state.tenantId });
+      return send(res, 429, {
+        error: limitCheck.message,
+        reason: limitCheck.reason,
+        resetTime: limitCheck.resetTime || null,
+        resetInSeconds: limitCheck.resetInSeconds || null,
+      });
+    }
+
+    const langCode = lang(b.lang);
+    let geminiContents = b.messages.map((m) => {
+      if (m.parts && Array.isArray(m.parts)) return m;
+      return {
+        role: m.role === "assistant" || m.role === "model" ? "model" : "user",
+        parts: [{ text: String(m.content || m.text || "") }],
+      };
+    });
 
     const cfg = buildGeminiSession({
       lang: langCode,
