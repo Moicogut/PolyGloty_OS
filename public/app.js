@@ -50,11 +50,37 @@ let currentSynthUtterance = null;
 let tStop = 0;
 
 function paint() {
-  $("#lv").textContent = `Nv ${S.level}`;
-  $("#xb").style.width = `${(S.levelProgress / S.levelSize) * 100}%`;
-  $("#xp").textContent = `${S.xp} XP`;
-  $("#streak").textContent = `🔥 Racha ${S.streak} ${S.streak === 1 ? "día" : "días"}`;
-  $("#duechip").textContent = `📚 ${S.due} por repasar`;
+  const meterEl = $(".meter");
+  if (meterEl) {
+    if (!S.xp || S.xp === 0) {
+      meterEl.style.display = "none";
+    } else {
+      meterEl.style.display = "flex";
+      $("#lv").textContent = `Nv ${S.level}`;
+      $("#xb").style.width = `${(S.levelProgress / S.levelSize) * 100}%`;
+      $("#xp").textContent = `${S.xp} XP`;
+    }
+  }
+
+  const streakEl = $("#streak");
+  if (streakEl) {
+    if (!S.streak || S.streak === 0) {
+      streakEl.style.display = "none";
+    } else {
+      streakEl.style.display = "inline-flex";
+      streakEl.textContent = `🔥 Racha ${S.streak} ${S.streak === 1 ? "día" : "días"}`;
+    }
+  }
+
+  const dueEl = $("#duechip");
+  if (dueEl) {
+    if (!S.due || S.due === 0) {
+      dueEl.style.display = "none";
+    } else {
+      dueEl.style.display = "inline-flex";
+      dueEl.textContent = `📚 ${S.due} por repasar`;
+    }
+  }
 
   const userLabel = $("#userName");
   const authBtn = $("#authBtn");
@@ -1313,6 +1339,27 @@ async function init() {
     if (modal) modal.hidden = true;
     paint();
     await refresh();
+  });
+
+  // Eventos de Lista de Espera de Chino
+  $("#zhWaitlistBtn")?.addEventListener("click", () => {
+    const modal = $("#zhWaitlistModal");
+    if (modal) modal.hidden = false;
+  });
+
+  $("#closeZhWaitlistModal")?.addEventListener("click", () => {
+    const modal = $("#zhWaitlistModal");
+    if (modal) modal.hidden = true;
+  });
+
+  $("#zhWaitlistForm")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const waitlistEmail = ($("#zhWaitlistEmail")?.value || "").trim();
+    if (waitlistEmail) {
+      toast("¡Gracias! Te avisaremos por correo en cuanto lancemos el tutor de chino.");
+      if ($("#zhWaitlistModal")) $("#zhWaitlistModal").hidden = true;
+      $("#zhWaitlistEmail").value = "";
+    }
   });
 
   window.speechSynthesis?.getVoices();

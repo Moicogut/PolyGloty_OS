@@ -67,9 +67,12 @@
       <div class="config-pill">
         <span class="cfg-icon">🌐</span>
         <select id="lang">
-          <option value="en">English</option>
-          <option value="zh">中文 (Chino)</option>
+          <option value="en" selected>English (Inglés)</option>
+          <option value="zh" disabled>Chino: próximamente</option>
         </select>
+        <button id="zhWaitlistBtn" type="button" class="link-vocab-btn small" title="Notificarme cuando el tutor de Chino esté disponible" style="padding: 2px 6px; font-size: 11px;">
+          🔔 Chino: Próximamente
+        </button>
       </div>
       <div class="config-pill">
         <span class="cfg-icon">🎯</span>
@@ -382,6 +385,30 @@
     </div>
     <div class="row" style="justify-content: flex-end;">
       <button id="micBlockedContinueTextBtn" type="button" class="primary">Continuar con texto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE LISTA DE ESPERA DE CHINO -->
+<div id="zhWaitlistModal" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 28px;">🇨🇳</span>
+        <div>
+          <h3 style="margin: 0;">Chino Mandarín: Próximamente</h3>
+          <p class="muted small" style="margin: 0;">Sé de los primeros en probarlo</p>
+        </div>
+      </div>
+      <button id="closeZhWaitlistModal" type="button" class="modal-close">&times;</button>
+    </div>
+    <div style="margin: 16px 0; font-size: 14px; line-height: 1.5;">
+      <p>El PMV actual está enfocado al 100% en <b>Inglés conversacional</b> para garantizar la máxima fluidez y precisión sin caídas.</p>
+      <p>El tutor de <b>Chino Mandarín (con evaluación de tonos en tiempo real)</b> estará disponible muy pronto. Déjanos tu correo para avisarte en cuanto abra el acceso anticipado:</p>
+      <form id="zhWaitlistForm" style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
+        <input id="zhWaitlistEmail" type="email" placeholder="tu@correo.com" required>
+        <button type="submit" class="primary">Avisarme cuando esté listo</button>
+      </form>
     </div>
   </div>
 </div>
