@@ -202,5 +202,43 @@ test("GET /health responde 200 con ok: true sin tocar base de datos", async () =
   } finally { s.stop(); }
 });
 
+test("seguridad: ninguna respuesta del servidor expone GEMINI_API_KEY ni OPENAI_API_KEY", async () => {
+  const fakeGeminiKey = "AIzaSySecretGeminiKeyForLeakTesting98765";
+  const fakeOpenaiKey = "sk-live-secret-openai-key-for-leak-testing-12345";
+  const s = await start({
+    GEMINI_API_KEY: fakeGeminiKey,
+    OPENAI_API_KEY: fakeOpenaiKey,
+  });
+  try {
+    const endpointsToInspect = [
+      { path: "/api/state", method: "GET" },
+      { path: "/api/state?lang=zh", method: "GET" },
+      { path: "/api/cards/due", method: "GET" },
+      { path: "/api/cards?lang=en", method: "GET" },
+      { path: "/health", method: "GET" },
+      { path: "/api/session?lang=en", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) },
+      { path: "/api/session?lang=zh", method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) },
+      { path: "/gemini-live.js", method: "GET" },
+      { path: "/app.js", method: "GET" },
+      { path: "/index.html", method: "GET" },
+    ];
+
+    for (const ep of endpointsToInspect) {
+      const res = await fetch(`${s.base}${ep.path}`, {
+        method: ep.method,
+        headers: { Origin: s.base, ...(ep.headers || {}) },
+        body: ep.body,
+      });
+      const text = await res.text();
+      // Verificación en memoria sin imprimir los valores de las claves
+      const containsGeminiKey = text.includes(fakeGeminiKey);
+      const containsOpenaiKey = text.includes(fakeOpenaiKey);
+      assert.equal(containsGeminiKey, false, `Endpoint ${ep.path} expuso GEMINI_API_KEY`);
+      assert.equal(containsOpenaiKey, false, `Endpoint ${ep.path} expuso OPENAI_API_KEY`);
+    }
+  } finally { s.stop(); }
+});
+
+
 
 
