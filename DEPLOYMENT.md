@@ -79,3 +79,30 @@ Render permite alojar aplicaciones Node.js con HTTPS gratis (ideal para Web Spee
 4. Pega estos valores en tu `.env` o en las variables de entorno de tu servidor en la nube.
 
 > **Nota de Resiliencia:** Si `SUPABASE_URL` no está configurada, el sistema activa automáticamente el motor **Multi-tenant Local**, aislando a cada usuario por su ID sin romper la aplicación.
+
+---
+
+## Cambios de Despliegue · Parte 1: Estabilidad y Seguridad (Bloqueantes)
+
+1. **Endpoint de Salud / Health Check:**
+   - Creado `GET /health` que responde código 200 `{ status: "ok" }` de forma inmediata.
+   - Actualizado `render.yaml` con `healthCheckPath: /health` para monitoreo continuo y evitar suspensión.
+   - Frontend con aviso de activación `"Despertando el tutor, un momento..."` si el backend frío tarda > 3 s.
+
+2. **Seguridad y Row Level Security (RLS) en Supabase:**
+   - Activado RLS estricto en `profiles`, `cards`, `competencies`, `conversations` y `session_vocab`.
+   - Políticas con `auth.uid() = user_id` o `service_role`. Ningún usuario puede consultar ni alterar datos de otro inquilino.
+   - Verificado `.gitignore` y auditoría de historial: ninguna clave en el código ni en el navegador.
+
+3. **Límites de Uso y Validación Antifraude:**
+   - `lib/limiter.js`: Límite por minuto (máximo 15 turnos) y límite diario (30 minutos de conversación activa / 1800 s).
+   - Bloqueo automático al agotar la cuota diaria mostrando `"Llegaste al límite de hoy. Vuelve mañana."` con contador de reinicio.
+   - `lib/validator.js`: Validación estricta de tamaño y tipo para payloads de texto (máx 2000 chars/turno) y audio (máx 5 MB).
+
+4. **Flujo de Cuentas y Recuperación:**
+   - Endpoint `POST /api/auth/reset-password` integrado con Supabase Auth y persistencia local defensiva.
+   - Mensajes limpios en español claro, sin códigos de error técnicos.
+
+5. **Enfoque MVP Inglés:**
+   - Chino desactivado con selector en modo `"Chino: próximamente"` y modal de lista de espera con captura opcional de correo.
+
