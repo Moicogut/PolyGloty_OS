@@ -2,9 +2,10 @@
 -- MIGRACIÓN 001: RLS Estricto por Usuario (PASO HUMANO: Ejecutar en Supabase SQL Editor)
 -- Proyecto: Polyglot Voice
 -- Objetivo: Garantizar aislamiento total de datos multi-tenant por auth.uid()
+-- Idempotente: Se puede ejecutar múltiples veces sin error.
 -- ============================================================================
 
--- 1. Eliminar políticas abiertas o permisivas anteriores
+-- 1. Eliminar políticas antiguas o permisivas en todas las tablas
 DROP POLICY IF EXISTS "Public profiles access" ON public.profiles;
 DROP POLICY IF EXISTS "Cards user access" ON public.cards;
 DROP POLICY IF EXISTS "Competencies user access" ON public.competencies;
@@ -16,6 +17,31 @@ DROP POLICY IF EXISTS "Users can only read and write their own cards" ON public.
 DROP POLICY IF EXISTS "Users can only read and write their own competencies" ON public.competencies;
 DROP POLICY IF EXISTS "Users can only read and write their own conversations" ON public.conversations;
 DROP POLICY IF EXISTS "Users can only read and write their own vocab" ON public.session_vocab;
+
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_delete_own" ON public.profiles;
+
+DROP POLICY IF EXISTS "cards_select_own" ON public.cards;
+DROP POLICY IF EXISTS "cards_insert_own" ON public.cards;
+DROP POLICY IF EXISTS "cards_update_own" ON public.cards;
+DROP POLICY IF EXISTS "cards_delete_own" ON public.cards;
+
+DROP POLICY IF EXISTS "competencies_select_own" ON public.competencies;
+DROP POLICY IF EXISTS "competencies_insert_own" ON public.competencies;
+DROP POLICY IF EXISTS "competencies_update_own" ON public.competencies;
+DROP POLICY IF EXISTS "competencies_delete_own" ON public.competencies;
+
+DROP POLICY IF EXISTS "conversations_select_own" ON public.conversations;
+DROP POLICY IF EXISTS "conversations_insert_own" ON public.conversations;
+DROP POLICY IF EXISTS "conversations_update_own" ON public.conversations;
+DROP POLICY IF EXISTS "conversations_delete_own" ON public.conversations;
+
+DROP POLICY IF EXISTS "vocab_select_own" ON public.session_vocab;
+DROP POLICY IF EXISTS "vocab_insert_own" ON public.session_vocab;
+DROP POLICY IF EXISTS "vocab_update_own" ON public.session_vocab;
+DROP POLICY IF EXISTS "vocab_delete_own" ON public.session_vocab;
 
 -- 2. Asegurar que Row Level Security (RLS) esté activado en todas las tablas
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -149,3 +175,23 @@ CREATE POLICY "vocab_delete_own"
   ON public.session_vocab FOR DELETE
   TO authenticated
   USING (user_id = auth.uid()::text);
+
+-- ============================================================================
+-- CONSULTAS DE CONTROL (PASO HUMANO: Ejecutar para verificar tras aplicar)
+-- ============================================================================
+-- 1. Verificar que ninguna política tenga USING ('true') o CHECK ('true')
+-- SELECT schemaname, tablename, policyname, roles, cmd, qual, with_check
+-- FROM pg_policies
+-- WHERE schemaname = 'public';
+
+-- 2. Verificar que RLS esté activado (relrowsecurity = true) en las 5 tablas
+-- SELECT relname, relrowsecurity, relforcerowsecurity
+-- FROM pg_class
+-- WHERE relname IN ('profiles', 'cards', 'competencies', 'conversations', 'session_vocab');
+
+-- 3. Verificar que el rol 'anon' NO tenga permisos sobre las tablas
+-- SELECT grantee, table_name, privilege_type
+-- FROM information_schema.role_table_grants
+-- WHERE grantee = 'anon'
+--   AND table_schema = 'public'
+--   AND table_name IN ('profiles', 'cards', 'competencies', 'conversations', 'session_vocab');
