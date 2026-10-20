@@ -179,11 +179,40 @@ En esta sesión se cerraron las 7 tareas críticas de seguridad y estabilidad so
 
 ---
 
-## 12. Próxima Sesión: Roadmap Parte 1C
+---
 
-Para la **Parte 1C** (tercera entrega del bloque de estabilidad/PMV), los objetivos previstos son:
-- **Refinamiento de UX en conversación continua de 5 minutos**: Asegurar que la sesión no sufra micro-cortes acumulados, auto-guardado progresivo y cierre limpio con resumen pedagógico.
-- **Calibración fina del Web Speech API**: Ajustar la sensibilidad del botón de habla, intervalos de silencio y manejo en Safari iOS.
-- **Consolidación de métricas de uso y telemetría**: Visualización de minutos restantes de práctica diaria en la interfaz del alumno.
+## 13. Parte 1C: Cierre y Verificación (Rama `fix/parte-1c`)
+
+En esta entrega se cerraron y verificaron con evidencia real las tareas pendientes de la Parte 1B sobre la nueva rama `fix/parte-1c`:
+
+### 13.1 Resumen de Tareas C1 .. C7
+1. **C1. Migración RLS Completa e Idempotente (`commit e9989b7`)**:
+   - `supabase/migrations/001_rls_por_usuario.sql` actualizado con cláusulas `DROP POLICY IF EXISTS` para todas las políticas antiguas (`USING (true)`) y las nuevas antes de cada `CREATE POLICY`.
+   - Incorporadas las 3 consultas de control para verificación humana (`pg_policies`, `relrowsecurity` en `pg_class`, y permisos de `anon`).
+2. **C3. Token Efímero y Fuga de Credenciales (`commit 34577ae`)**:
+   - Verificado que el frontend (`public/gemini-live.js`) y `public/app.js` no reciben claves de API.
+   - Implementado test en `test/server.test.js` que audita 10 endpoints asegurando en memoria que ninguna respuesta contenga `GEMINI_API_KEY` ni `OPENAI_API_KEY`.
+3. **C2. Uso Diario Persistente (`commit 2ae7285`)**:
+   - Definida la tabla `public.user_usage` (columnas `user_id`, `usage_date`, `seconds_used`, `turns_count`) en `supabase/migrations/003_uso_diario.sql` con RLS estricto (`user_id = auth.uid()`).
+   - Implementada resiliencia en `lib/limiter.js`: si Supabase falla o tiene timeout, se mantiene el límite local en memoria y nunca se permite consumo ilimitado.
+   - Test de persistencia tras reinicio añadido a `test/limiter.test.js`.
+4. **C4. Persistencia Real en Producción (`commit 94e8c03`)**:
+   - Guardia estricta en `server.js`: en `NODE_ENV=production`, si falta la configuración de Supabase, el servidor aborta inmediatamente con exit code 1.
+   - `test/isolation.test.js` ampliado: certifica que el servidor se niega a iniciar sin Supabase en producción y que dos usuarios persisten su estado de forma completamente aislada tras reinicio del proceso.
+5. **C5. Modelos Oficiales y Prueba de Humo (`commit 91f59bc`)**:
+   - Verificado con documentación oficial de Google: `gemini-2.0-flash` y `gemini-1.5-flash` fueron retirados o reemplazados. Los modelos vigentes son `gemini-3.8-flash` (Interactions API / chat) y `gemini-3.8-live` (WebSockets Live API).
+   - `scripts/smoke.js` creado y ejecutado en vivo con las variables de entorno reales.
+6. **C7. Recuperación de Contraseña (`commit c08fc95`)**:
+   - `POST /api/auth/reset-password` estandarizado para devolver siempre la misma respuesta, exista o no el correo (protección anti-enumeración de usuarios).
+   - Añadidos limitadores de tasa por IP (`resetPasswordIpLimiter`) y por correo (`resetPasswordEmailLimiter`) de máx 5 peticiones por 15 minutos.
+   - Documentada en `DEPLOYMENT.md` la necesidad de registrar el dominio en la lista permitida de Redirect URLs de Supabase.
+   - Test implementado en `test/auth_supabase.test.js`.
+7. **C6. Latencia Real (`commit ad3f72d`)**:
+   - Creado `scripts/latency-report.js` que procesa logs estructurados reales (`data/latency_logs.jsonl`) calculando promedio, p50 y p90 sin generar datos sintéticos.
+   - `lib/logger.js` adaptado para guardar los logs de forma persistente. Reporta `NO VERIFICADO` de forma fiel ante la falta de logs de turnos en dispositivos móviles.
+
+### 13.2 Métricas Finales
+- Suite de tests: **47 pasando, 0 fallos, 1 omitido defensivamente (48 totales)** en `npm test`.
+
 
 
