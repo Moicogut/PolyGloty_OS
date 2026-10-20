@@ -249,10 +249,10 @@ function initSpeechRecognition() {
 
   rec.onerror = (e) => {
     console.warn("Speech recognition error:", e.error);
-    if (e.error === "not-allowed") {
-      toast("Permiso de micrófono denegado en el navegador.");
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
       isRecording = false;
       if ($("#voiceBtn")) $("#voiceBtn").classList.remove("recording");
+      showMicBlockedModal();
     } else if (e.error === "no-speech") {
       // Ignorar silencio temporal para permitir al alumno pensar sin cortar la sesión
       console.log("Silencio detectado; micrófono sigue activo");
@@ -281,6 +281,17 @@ function initSpeechRecognition() {
   return rec;
 }
 
+function showMicBlockedModal() {
+  const modal = $("#micBlockedModal");
+  if (modal) modal.hidden = false;
+  // Dejar campo de texto habilitado y enfocarlo
+  const txt = $("#chatText");
+  if (txt) {
+    txt.removeAttribute("disabled");
+    txt.focus();
+  }
+}
+
 let recordingStartTime = 0;
 
 function toggleRecording() {
@@ -288,9 +299,24 @@ function toggleRecording() {
     toast("Presiona 'Empezar' para iniciar la sesión con tu tutor.");
     return;
   }
+
+  // Si el usuario aún no vio la explicación previa del permiso de micrófono
+  const explained = store.get("mic_permission_explained");
+  if (!explained) {
+    const explainer = $("#micExplainerModal");
+    if (explainer) {
+      explainer.hidden = false;
+      return;
+    }
+  }
+
+  startOrStopRecording();
+}
+
+function startOrStopRecording() {
   if (!recognition) recognition = initSpeechRecognition();
   if (!recognition) {
-    toast("Navegador sin soporte de voz. Escribe directamente en el chat.");
+    showMicBlockedModal();
     return;
   }
 
@@ -316,6 +342,7 @@ function toggleRecording() {
       recognition.start();
     } catch (err) {
       console.warn("Error al iniciar reconocimiento:", err);
+      showMicBlockedModal();
     }
   }
 }
@@ -1114,6 +1141,38 @@ async function init() {
   updateTutorPersona();
   updateTransToggle();
   loadDrills();
+
+  // Eventos de Modales de Micrófono y Alternativa de Texto
+  $("#micExplainerAllowBtn")?.addEventListener("click", () => {
+    store.set("mic_permission_explained", "1");
+    if ($("#micExplainerModal")) $("#micExplainerModal").hidden = true;
+    startOrStopRecording();
+  });
+
+  $("#micExplainerCancelBtn")?.addEventListener("click", () => {
+    store.set("mic_permission_explained", "1");
+    if ($("#micExplainerModal")) $("#micExplainerModal").hidden = true;
+    const txt = $("#chatText");
+    if (txt) {
+      txt.removeAttribute("disabled");
+      txt.focus();
+    }
+  });
+
+  $("#closeMicBlockedModal")?.addEventListener("click", () => {
+    if ($("#micBlockedModal")) $("#micBlockedModal").hidden = true;
+    $("#chatText")?.focus();
+  });
+
+  $("#micBlockedContinueTextBtn")?.addEventListener("click", () => {
+    if ($("#micBlockedModal")) $("#micBlockedModal").hidden = true;
+    const txt = $("#chatText");
+    if (txt) {
+      txt.removeAttribute("disabled");
+      txt.focus();
+    }
+  });
+
   window.speechSynthesis?.getVoices();
 }
 
