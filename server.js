@@ -27,12 +27,14 @@ const GEMINI_MODEL = process.env.GEMINI_LIVE_MODEL || "models/gemini-2.0-flash-e
 const PROVIDER = process.env.VOICE_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai");
 const repo = new TenantRepository(path.join(ROOT, "data"));
 const supabase = new SupabaseAdapter({ tenantRepo: repo });
-// Rate limiter: Máximo 15 ofertas SDP por minuto por cliente/IP
+// Rate limiter: Máximo de solicitudes por minuto por cliente (usa user_id si está autenticado, sino IP)
 const sessionLimiter = new RateLimiter({ windowMs: 60_000, maxRequests: Number(process.env.MAX_SESSIONS_PER_MIN || 15) });
-// User Usage Limiter: control por minuto (máx 15 turnos) y cuota diaria (30 minutos de conversación)
+// User Usage Limiter: control por minuto (máx 15 turnos) y cuota diaria configurable guardada en Supabase (por defecto 30 minutos)
+const DAILY_MINUTES_LIMIT = Number(process.env.DAILY_MINUTES_LIMIT || 30);
 const userUsageLimiter = new UserUsageLimiter({
   maxTurnsPerMinute: Number(process.env.MAX_TURNS_PER_MIN || 15),
-  maxDailySeconds: Number(process.env.MAX_DAILY_SECONDS || 30 * 60),
+  maxDailySeconds: DAILY_MINUTES_LIMIT * 60,
+  supabaseAdapter: supabase,
 });
 
 const getClientIp = (req) => {
@@ -173,10 +175,12 @@ const routes = {
     const start = Date.now();
     const clientIp = getClientIp(req);
     const state = resolveTenantStore(req, url);
-    const limitCheck = sessionLimiter.isAllowed(clientIp);
+    // En rutas autenticadas la clave del limiter es el user_id; si no, IP
+    const limiterKey = state.tenantId && state.tenantId !== "default" ? state.tenantId : clientIp;
+    const limitCheck = sessionLimiter.isAllowed(limiterKey);
 
     if (!limitCheck.allowed) {
-      logger.warn("rate_limit_exceeded", { ip: clientIp, resetInSeconds: limitCheck.resetInSeconds }, state.tenantId);
+      logger.warn("rate_limit_exceeded", { key: limiterKey, resetInSeconds: limitCheck.resetInSeconds }, state.tenantId);
       return send(res, 429, { error: `Límite de solicitudes alcanzado. Intenta de nuevo en ${limitCheck.resetInSeconds} segundos.` }, "application/json", { "Retry-After": String(limitCheck.resetInSeconds) });
     }
 
@@ -256,16 +260,24 @@ const routes = {
 
     const state = resolveTenantStore(req, url);
 
-    // Verificación de límites por usuario (turnos por minuto y cuota diaria de 30 minutos)
-    const limitCheck = userUsageLimiter.checkAndTrackTurn(state.tenantId);
+    // Verificación de límites por usuario (turnos por minuto y cuota diaria configurable guardada en Supabase)
+    const limitCheck = await userUsageLimiter.checkAndTrackTurn(state.tenantId);
     if (!limitCheck.allowed) {
       logger.warn("user_quota_exceeded", { reason: limitCheck.reason, tenantId: state.tenantId });
+      if (limitCheck.reason === "daily_limit") {
+        return send(res, 429, {
+          error: "limite_diario",
+          message: limitCheck.message,
+          resetIn: limitCheck.resetIn,
+          resetTime: limitCheck.resetTime,
+        }, "application/json", { "Retry-After": String(limitCheck.resetIn) });
+      }
       return send(res, 429, {
-        error: limitCheck.message,
-        reason: limitCheck.reason,
-        resetTime: limitCheck.resetTime || null,
-        resetInSeconds: limitCheck.resetInSeconds || null,
-      });
+        error: limitCheck.error || "limite_excedido",
+        message: limitCheck.message,
+        resetIn: limitCheck.resetIn,
+        resetInSeconds: limitCheck.resetIn,
+      }, "application/json", { "Retry-After": String(limitCheck.resetIn) });
     }
 
     const langCode = lang(b.lang);

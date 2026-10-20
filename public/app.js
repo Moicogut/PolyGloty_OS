@@ -31,7 +31,15 @@ const api = async (p, opt = {}) => {
   const r = await fetch(p, { ...opt, headers });
   const t = await r.text();
   let j = null; try { j = JSON.parse(t); } catch { /* texto plano */ }
-  if (!r.ok) throw new Error(j?.error || t || `HTTP ${r.status}`);
+  if (!r.ok) {
+    const msg = (j?.error === "limite_diario" || j?.reason === "daily_limit")
+      ? "Llegaste al límite de hoy. Vuelve mañana."
+      : (j?.message || j?.error || t || `HTTP ${r.status}`);
+    const err = new Error(msg);
+    err.status = r.status;
+    err.data = j;
+    throw err;
+  }
   return j ?? t;
 };
 const post = (p, b) => api(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b ?? {}) });

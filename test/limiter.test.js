@@ -14,28 +14,31 @@ test("TAREA 6: Límites por minuto, cuota diaria (30 min) y validación de entra
   const now = Date.now();
 
   // Primeros 3 turnos permitidos
-  assert.equal(limiter.checkAndTrackTurn(user, 10, now).allowed, true);
-  assert.equal(limiter.checkAndTrackTurn(user, 10, now).allowed, true);
-  assert.equal(limiter.checkAndTrackTurn(user, 10, now).allowed, true);
+  assert.equal((await limiter.checkAndTrackTurn(user, 10, now)).allowed, true);
+  assert.equal((await limiter.checkAndTrackTurn(user, 10, now)).allowed, true);
+  assert.equal((await limiter.checkAndTrackTurn(user, 10, now)).allowed, true);
 
   // El 4to turno dentro del mismo minuto debe ser bloqueado por spam
-  const minuteBlocked = limiter.checkAndTrackTurn(user, 10, now);
+  const minuteBlocked = await limiter.checkAndTrackTurn(user, 10, now);
   assert.equal(minuteBlocked.allowed, false);
   assert.equal(minuteBlocked.reason, "minute_limit");
+  assert.equal(minuteBlocked.error, "limite_minuto");
   assert.ok(minuteBlocked.message.includes("espera") || minuteBlocked.message.includes("rápido"));
 
-  // 2. Limiter: Límite diario (30 min / segundos máximos)
+  // 2. Limiter: Límite diario (configurable por DAILY_MINUTES_LIMIT)
   const userDaily = "alumno-daily-test";
   // Simular turnos hasta consumir la cuota de práctica diaria
-  limiter.checkAndTrackTurn(userDaily, 25, now);
-  limiter.checkAndTrackTurn(userDaily, 25, now + 70_000); // minuto siguiente
-  limiter.checkAndTrackTurn(userDaily, 20, now + 140_000); // cuota de 60s excedida (70s)
+  await limiter.checkAndTrackTurn(userDaily, 25, now);
+  await limiter.checkAndTrackTurn(userDaily, 25, now + 70_000); // minuto siguiente
+  await limiter.checkAndTrackTurn(userDaily, 20, now + 140_000); // cuota de 60s excedida (70s)
 
-  const dailyBlocked = limiter.checkAndTrackTurn(userDaily, 15, now + 200_000);
+  const dailyBlocked = await limiter.checkAndTrackTurn(userDaily, 15, now + 200_000);
   assert.equal(dailyBlocked.allowed, false);
   assert.equal(dailyBlocked.reason, "daily_limit");
-  assert.ok(dailyBlocked.message.includes("Llegaste al límite de hoy"));
-  assert.ok(dailyBlocked.message.includes("Vuelve mañana"));
+  assert.equal(dailyBlocked.error, "limite_diario");
+  assert.equal(typeof dailyBlocked.resetIn, "number");
+  assert.ok(dailyBlocked.resetIn > 0);
+  assert.equal(dailyBlocked.message, "Llegaste al límite de hoy. Vuelve mañana.");
   assert.ok(dailyBlocked.resetTime);
 
   // 3. Validator: Tamaño y tipo de entrada de texto
