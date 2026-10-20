@@ -1069,12 +1069,40 @@ $("#logoutBtn")?.addEventListener("click", async () => {
 
 // ---------------------------------------------------------------- evaluación y competencias
 function renderCompetencies() {
-  const comp = S?.competencies || { grammar: 60, vocabulary: 65, fluency: 55, comprehension: 70, milestones: [] };
+  const comp = S?.competencies;
 
-  const g = Math.round(comp.grammar || 60);
-  const v = Math.round(comp.vocabulary || 65);
-  const f = Math.round(comp.fluency || 55);
-  const c = Math.round(comp.comprehension || 70);
+  if (!comp) {
+    if ($("#compGrammarVal")) $("#compGrammarVal").textContent = "0%";
+    if ($("#compGrammarFill")) $("#compGrammarFill").style.width = "0%";
+    if ($("#compVocabVal")) $("#compVocabVal").textContent = "0%";
+    if ($("#compVocabFill")) $("#compVocabFill").style.width = "0%";
+    if ($("#compFluencyVal")) $("#compFluencyVal").textContent = "0%";
+    if ($("#compFluencyFill")) $("#compFluencyFill").style.width = "0%";
+    if ($("#compCompVal")) $("#compCompVal").textContent = "0%";
+    if ($("#compCompFill")) $("#compCompFill").style.width = "0%";
+    const currentLevel = $("#level")?.value || "A1";
+    if ($("#verifiedLevelBadge")) {
+      $("#verifiedLevelBadge").textContent = `Nivel ${currentLevel}: Sin evaluar`;
+    }
+    const mList = $("#milestonesList");
+    if (!mList) return;
+    const allMilestones = Array.isArray(S?.milestones) ? S.milestones : [];
+    mList.replaceChildren(...allMilestones.map((m) => {
+      const row = el("div", "milestone-item");
+      const info = el("div", "milestone-info");
+      info.append(el("h5", "", `${m.title} [${m.level}]`));
+      info.append(el("p", "", m.desc));
+      const badge = el("span", "milestone-status pending", "⏳ En progreso");
+      row.append(info, badge);
+      return row;
+    }));
+    return;
+  }
+
+  const g = Math.round(comp.grammar || 0);
+  const v = Math.round(comp.vocabulary || 0);
+  const f = Math.round(comp.fluency || 0);
+  const c = Math.round(comp.comprehension || 0);
 
   if ($("#compGrammarVal")) $("#compGrammarVal").textContent = `${g}%`;
   if ($("#compGrammarFill")) $("#compGrammarFill").style.width = `${g}%`;

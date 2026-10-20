@@ -39,15 +39,22 @@ test("TAREA 5: Seguridad de Datos y Aislamiento Multi-Tenant (Cuenta A vs Cuenta
   assert.notEqual(userA.id, userB.id, "Los identificadores de tenant deben ser distintos");
   assert.equal(storeB.data.cards.length, 0, "Cuenta B no debe tener las tarjetas de Cuenta A");
   assert.equal((storeB.data.conversations || []).length, 0, "Cuenta B no debe tener el historial de Cuenta A");
-  assert.equal(storeB.data.profile.xp, 0, "Cuenta B no debe tener la experiencia de Cuenta A");
+  assert.equal(storeB.data.profile.xp, 0, "Cuenta B debe iniciar con progreso en cero");
+  assert.equal(storeB.data.competencies, null, "Nuevo usuario debe iniciar con competencias en null");
 
   // 4. Modificación de Cuenta B no altera Cuenta A
   storeB.data.profile.xp = 50;
   storeB.data.cards.push({ id: "card_b_1", front: "B Card", back: "B", lang: "en", due: Date.now() });
   storeB.save();
 
-  const verifyA = repo.getStore(userA.id);
+  // 5. Reinicio de store (simular reinicio de servidor / recarga de repositorio)
+  const freshRepo = new TenantRepository(tmpDir);
+  const verifyA = freshRepo.getStore(userA.id);
+  const verifyB = freshRepo.getStore(userB.id);
+
   assert.equal(verifyA.data.profile.xp, 120, "XP de Cuenta A permanece intacta");
   assert.equal(verifyA.data.cards.length, 1, "Tarjetas de Cuenta A no sufren modificaciones por Cuenta B");
   assert.equal(verifyA.data.cards[0].id, "card_a_1");
+  assert.equal(verifyB.data.profile.xp, 50, "XP de Cuenta B permanece aislada tras reinicio");
+  assert.equal(verifyB.data.cards.length, 1, "Tarjetas de Cuenta B persisten aisladamente tras reinicio");
 });
