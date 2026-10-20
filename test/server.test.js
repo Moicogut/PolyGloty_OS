@@ -189,4 +189,18 @@ test("rate limiting: bloquea solicitudes excesivas a /api/session con 429", asyn
   } finally { s.stop(); }
 });
 
+test("GET /health responde 200 con ok: true sin tocar base de datos", async () => {
+  const s = await start({});
+  try {
+    const res = await fetch(`${s.base}/health`);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.ok, true);
+    assert.equal(data.status, "ok");
+    assert.equal(data.service, "polyglot-voice");
+    assert.equal(typeof data.uptimeSeconds, "number");
+  } finally { s.stop(); }
+});
+
+
 

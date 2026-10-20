@@ -400,12 +400,12 @@ async function sendTurnToTutor(userText, sttDurationMs = 0) {
   status("Alex está pensando…");
   $("#avatarIcon").classList.add("speaking");
 
-  // Si pasa de 5s, informar sutilmente al usuario sin que parezca un fallo
+  // Si tarda más de 3s, informar al usuario que el servidor o modelo está despertando
   const slowTimer = setTimeout(() => {
-    status("El tutor está pensando…");
+    status("Despertando el tutor, un momento...");
     const latEl = $("#lat");
-    if (latEl) latEl.textContent = "pensando…";
-  }, 5000);
+    if (latEl) latEl.textContent = "despertando...";
+  }, 3000);
 
   conversationHistory.push({
     role: "user",

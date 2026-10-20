@@ -21,10 +21,12 @@ try {
 } catch { /* sin .env */ }
 
 const PORT = Number(process.env.PORT || 3000);
-const MODEL = process.env.REALTIME_MODEL || "gpt-realtime-2.1";
-const VOICE = process.env.REALTIME_VOICE || "marin";
-const GEMINI_MODEL = process.env.GEMINI_LIVE_MODEL || "models/gemini-2.0-flash-exp";
 const PROVIDER = process.env.VOICE_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai");
+const VOICE_MODEL = process.env.VOICE_MODEL || (PROVIDER === "gemini" ? (process.env.GEMINI_LIVE_MODEL || "gemini-2.0-flash") : (process.env.REALTIME_MODEL || "gpt-realtime-2.1"));
+const VOICE_BACKUP_MODEL = process.env.VOICE_BACKUP_MODEL || (PROVIDER === "gemini" ? "gemini-1.5-flash" : "gpt-realtime");
+const MODEL = VOICE_MODEL; // compatibilidad retroactiva
+const VOICE = process.env.REALTIME_VOICE || "marin";
+const GEMINI_MODEL = VOICE_MODEL.startsWith("models/") ? VOICE_MODEL : `models/${VOICE_MODEL}`;
 const repo = new TenantRepository(path.join(ROOT, "data"));
 const supabase = new SupabaseAdapter({ tenantRepo: repo });
 // Rate limiter: Máximo de solicitudes por minuto por cliente (usa user_id si está autenticado, sino IP)
@@ -137,6 +139,7 @@ const routes = {
 
   "GET /health": (req, res) => {
     send(res, 200, {
+      ok: true,
       status: "ok",
       service: "polyglot-voice",
       timestamp: new Date().toISOString(),
@@ -298,11 +301,10 @@ const routes = {
     });
 
     const candidateModels = [
-      process.env.GEMINI_MODEL,
-      "gemini-3.8-flash",
-      "gemini-3.5-flash",
-      "gemini-3.1-flash-lite",
-      "gemini-flash-latest",
+      VOICE_MODEL,
+      VOICE_BACKUP_MODEL,
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
     ].filter(Boolean);
     let rawText = "";
     let lastError = null;

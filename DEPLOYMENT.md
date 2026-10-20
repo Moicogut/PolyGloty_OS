@@ -28,11 +28,20 @@ Render permite alojar aplicaciones Node.js con HTTPS gratis (ideal para Web Spee
      - **Instance Type**: `Free`
 
 3. **Variables de Entorno en Render** (Pestaña *Environment*):
+   - `VOICE_PROVIDER`: `gemini` (o `openai`).
+   - `VOICE_MODEL`: `gemini-2.0-flash` (modelo estable, no experimental).
+   - `VOICE_BACKUP_MODEL`: `gemini-1.5-flash` (modelo de respaldo configurable).
    - `GEMINI_API_KEY`: Tu clave de Google Gemini.
-   - `VOICE_PROVIDER`: `gemini`
-   - `GEMINI_LIVE_MODEL`: `gemini-2.0-flash-exp` (o `gemini-1.5-flash`)
    - `SUPABASE_URL`: *(Opcional)* URL de tu proyecto Supabase (ej. `https://xxxx.supabase.co`).
    - `SUPABASE_KEY`: *(Opcional)* Clave pública o de servicio de Supabase.
+
+> [!IMPORTANT]
+> **Gestión de Suspensión en Render (Plan Free vs Pago):**
+> En el plan gratuito (`plan: free`), las instancias entran en suspensión tras 15 minutos de inactividad, provocando un retraso de 30-50 segundos en el primer arranque en frío.
+> Dispones de dos opciones recomendadas (Decisión humana):
+> - **Opción A (Recomendada para producción):** Actualizar el plan en Render a *Starter* (sin suspensión por inactividad).
+> - **Opción B (Gratuita con chequeo externo):** Mantener el `plan: free` y configurar un monitor externo (ej. UptimeRobot, cron job o GitHub Action) que realice una petición `GET https://TU-APP.onrender.com/health` cada 10 minutos para mantener la instancia caliente.
+> El frontend maneja este estado informando: *"Despertando el tutor, un momento..."* si el backend tarda más de 3 segundos en responder.
 
 4. **Compartir con el equipo**:
    - Render te otorgará una URL segura con SSL (ej. `https://polyglot-voice.onrender.com`).
