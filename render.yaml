@@ -4,6 +4,7 @@ services:
     runtime: node
     plan: free
     region: oregon
+    healthCheckPath: /health
     buildCommand: ""
     startCommand: "node server.js"
     envVars:

@@ -1128,10 +1128,22 @@ document.querySelectorAll(".tabs button, .bottom-nav button").forEach((b) => {
 });
 
 async function refresh() {
-  S = await api(`/api/state?lang=${lang()}`);
+  const wakeTimer = setTimeout(() => {
+    status("Despertando el tutor, un momento…");
+  }, 3000);
+
+  try {
+    S = await api(`/api/state?lang=${lang()}`);
+  } finally {
+    clearTimeout(wakeTimer);
+  }
+
   paint();
   paintProgress();
   renderSessionVocab();
+  if (status() === "Despertando el tutor, un momento…") {
+    status("Listo: presiona 'Empezar' para abrir la sesión.");
+  }
 }
 
 async function init() {

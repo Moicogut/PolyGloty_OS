@@ -117,6 +117,15 @@ const routes = {
     });
   },
 
+  "GET /health": (req, res) => {
+    send(res, 200, {
+      status: "ok",
+      service: "polyglot-voice",
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.round(process.uptime()),
+    });
+  },
+
   "POST /api/conversations": async (req, res, url) => {
     const state = resolveTenantStore(req, url);
     try {
