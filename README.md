@@ -56,3 +56,9 @@ La clave de API **nunca llega al navegador**: el servidor negocia la sesión (in
 - Costo: la voz en tiempo real se cobra por minuto de audio. La sesión se cierra sola a los 20 minutos.
 - Los datos se almacenan en `data/` aislados por usuario (`state.json` para default, `state_{userId}.json` para multi-tenant vía cabecera `x-user-id` o query `user_id`).
 
+## Privacidad y Reconocimiento de Voz
+
+- **Procesamiento de voz en el navegador:** Cuando utilizas la función de voz (micrófono), la API nativa `Web Speech API` de tu navegador transcribe el audio a texto. Dependiendo del navegador y sistema operativo (p. ej. Google Chrome en Android/Windows o Safari en iOS/macOS), el navegador puede enviar el fragmento de audio a sus servidores de reconocimiento de voz (Google o Apple) para generar la transcripción.
+- **Alternativa 100% disponible por texto:** El modo de texto permanece siempre activo y accesible sin restricciones en caso de que el micrófono esté bloqueado, no cuentes con hardware de audio o tu navegador no soporte reconocimiento por voz.
+
+
