@@ -71,3 +71,77 @@ test("TAREA 6: Límites por minuto, cuota diaria (30 min) y validación de entra
   assert.equal(valid.messages.length, 1);
   assert.equal(valid.lang, "en");
 });
+
+test("C2: persistencia de cuota de uso diario tras reinicio del proceso/instancia", async () => {
+  // Simulación de base de datos Supabase persistente para user_usage
+  const dbUsage = new Map();
+  const mockSupabase = {
+    async getDailyUsage(userId, dateStr) {
+      return dbUsage.get(`${userId}:${dateStr}`) || null;
+    },
+    async trackDailyUsage(userId, dateStr, seconds, turns) {
+      dbUsage.set(`${userId}:${dateStr}`, { seconds, turns });
+    },
+  };
+
+  const userId = "usuario_persistencia_c2";
+  const now = Date.now();
+
+  // 1. Proceso / Instancia 1: El usuario consume 40 segundos de su cuota
+  const limiter1 = new UserUsageLimiter({
+    maxDailySeconds: 60,
+    supabaseAdapter: mockSupabase,
+  });
+
+  const res1 = await limiter1.checkAndTrackTurn(userId, 40, now);
+  assert.equal(res1.allowed, true);
+  assert.equal(res1.secondsToday, 40);
+
+  // 2. Reinicio del proceso / nueva instancia del limiter (memoria local vacía)
+  const limiter2 = new UserUsageLimiter({
+    maxDailySeconds: 60,
+    supabaseAdapter: mockSupabase,
+  });
+
+  // Al llegar el siguiente turno tras el reinicio, limiter2 debe leer la cuota acumulada desde la persistencia
+  const res2 = await limiter2.checkAndTrackTurn(userId, 15, now + 1000);
+  assert.equal(res2.allowed, true);
+  assert.equal(res2.secondsToday, 55); // 40 + 15 conservados tras reinicio
+
+  // 3. Superar la cuota tras reinicio: 55s consumidos + 10s nuevo turno = 65s > 60s
+  // El siguiente turno encuentra daily.seconds ya acumulado en 65s >= 60s
+  const res3 = await limiter2.checkAndTrackTurn(userId, 10, now + 2000);
+  assert.equal(res3.allowed, true);
+  assert.equal(res3.secondsToday, 65);
+
+  const res4 = await limiter2.checkAndTrackTurn(userId, 10, now + 3000);
+  assert.equal(res4.allowed, false);
+  assert.equal(res4.reason, "daily_limit");
+  assert.equal(res4.error, "limite_diario");
+
+  // 4. Fallback si Supabase falla: verificar que el limiter retiene el límite local y nunca deja el consumo sin límite
+  const failingSupabase = {
+    async getDailyUsage() {
+      throw new Error("Supabase connection timeout");
+    },
+    async trackDailyUsage() {
+      throw new Error("Supabase DB error");
+    },
+  };
+  const resilientLimiter = new UserUsageLimiter({
+    maxDailySeconds: 30,
+    supabaseAdapter: failingSupabase,
+  });
+
+  // El fallo de Supabase no causa excepción no controlada y se aplica límite local
+  const rFail1 = await resilientLimiter.checkAndTrackTurn("usuario_fallback", 20, now);
+  assert.equal(rFail1.allowed, true);
+  // Turno 2: 20s acumulados < 30s máx, se permite y acumula a 40s
+  const rFail2 = await resilientLimiter.checkAndTrackTurn("usuario_fallback", 20, now + 1000);
+  assert.equal(rFail2.allowed, true);
+  // Turno 3: encuentra 40s acumulados >= 30s máx, bloquea con daily_limit
+  const rFail3 = await resilientLimiter.checkAndTrackTurn("usuario_fallback", 10, now + 2000);
+  assert.equal(rFail3.allowed, false);
+  assert.equal(rFail3.reason, "daily_limit");
+});
+
