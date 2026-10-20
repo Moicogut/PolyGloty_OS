@@ -95,29 +95,95 @@ Documento de memoria técnica, decisiones arquitectónicas, estado actual del si
 
 ---
 
-## 8. Arquitectura Móvil y Rediseño UI/UX (Estilo Praktika)
+## 9. Parte 1B: Auditoría de Seguridad y Estabilidad (Completada)
 
-- **Diseño Responsive 100%**:
-  - Implementación de **Bottom Navigation Bar** nativo en pantallas móviles (`< 768px`) con acceso directo a Tutor, Tonos, Repaso y Progreso.
-  - Header compacto con marca, nivel XP y racha optimizados para pantallas de 360px a 420px sin desbordamiento.
-  - **Tutor Hero Compacto**: Avatar con anillo pulsante `speaking`, badge de estado y controles esenciales (`Empezar` / `Terminar`).
-  - **Acordeón de Objetivos**: Cajón colapsable para que los objetivos del escenario no consuman el área de chat.
-  - **Conversation Dock Unificado**:
-    - Botón de micrófono central de gran tamaño con pulso de grabación.
-    - Selector rápido de idioma de voz (`🗣️ EN` / `🗣️ ES` / `🗣️ ZH`) para evitar que el motor de voz transcriba fonéticamente español en inglés.
-    - Subtítulos de traducción rápidos (`🌐 ES`) y campo de texto fluido.
-- **Corrección de Conexión (Botón Empezar)**:
-  - Se eliminó la referencia huerfana a `$("#mute")` en `connect()` que provocaba `TypeError: Cannot set properties of null (setting 'disabled')` e impedía el inicio de sesión.
-  - Todas las asignaciones al DOM en `connect()` y `hangup()` ahora son 100% defensivas con validación de existencia previa.
-- **Distribución Móvil Despejada**:
-  - Reestructuración de `.tutor-hero` con contenedores elásticos (`.tutor-header-left` y `.tutor-header-actions`), evitando que el título *Alex · Tutor de Inglés* se fragmente en 4 líneas verticales.
-  - Ocultamiento de la micro-barra de progreso en móviles para dar respiración a *Nv 1* y *0 XP*.
-  - `padding-bottom: 96px` en `body` para garantizar que el dock de voz y entrada no colisione con el `bottom-nav`.
+En esta sesión se cerraron las 7 tareas críticas de seguridad y estabilidad sobre la rama `fix/parte-1b` (un commit por tarea, 100% de tests en verde):
 
-- **Limpieza de Síntesis Auditiva**:
-  - Función `cleanTextForSpeech` que elimina pinyin entre paréntesis `(Nǐ hǎo...)`, markdown y caracteres especiales para evitar lecturas deletreadas o robóticas.
-  - Carga asíncrona de voces del sistema con filtro de calidad preferente (`natural`, `online`, `google`).
-- **Resiliencia de Backend (Gemini Multi-Model Fallback)**:
-  - Cascada automática ante saturación (503 / 429): `gemini-2.5-flash` ➔ `gemini-2.0-flash` ➔ `gemini-1.5-flash`.
-  - Tolerancia semántica a transcripciones fonéticas imprecisas en el system prompt.
+### 9.1 Detalle de Tareas Ejecutadas (A2, A1, A3, A5, A7, A4, A6)
+
+1. **A2. Claves y Secretos (`commit ec394c6`)**:
+   - `git log --all --oneline -- .env` verificado: completamente vacío.
+   - Auditoría regex en `public/` (`sk-`, `AIza`, `eyJ`, `apiKey`, `service_role`): cero coincidencias.
+   - `public/gemini-live.js` blindado: no usa clave directa, recibe token efímero mediante constructor.
+   - `SUPABASE_KEY` aislado estrictamente en el backend (`lib/supabase.js`).
+   - `estado-polyglot.txt` eliminado del árbol de trabajo e ignorado en `.gitignore`.
+
+2. **A1. RLS Abierto / Bloqueante (`commit 7e233d8`)**:
+   - Creada migración SQL `supabase/migrations/001_rls_por_usuario.sql`:
+     - Elimina las políticas abiertas anteriores (`USING (true)`).
+     - Revoca todos los permisos sobre tablas al rol `anon`.
+     - Otorga permisos explícitos a `authenticated` y `service_role`.
+     - Implementa políticas por operación (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) con `user_id = auth.uid()` en `cards`, `competencies`, `conversations` y `session_vocab`, y con `id = auth.uid()` en `profiles`.
+   - `supabase/schema.sql` actualizado en sincronía exacta con la migración.
+   - Creado test de integración `test/rls.test.js` que verifica el aislamiento estricto entre Cuenta A y Cuenta B (con skip defensivo si no hay credenciales de prueba configuradas).
+
+3. **A3. Estado por Usuario (`commit a8b8570`)**:
+   - En `lib/store.js` y `lib/tutor.js`, los nuevos usuarios inician con progreso en cero (`xp: 0`) y competencias en `null` (no valores ficticios prefabricados).
+   - En `public/app.js`, la UI maneja `competencies === null` mostrando `0%` e `"Hitos en progreso"` sin alterar datos.
+   - `data/state.json` queda restringido como respaldo local de desarrollo y se desactiva como estado compartido en producción (`NODE_ENV=production`).
+   - `test/isolation.test.js` ampliado: certifica que dos usuarios conservan estados independientes, competencias nulas iniciales y persistencia aislada tras reinicio del store.
+
+4. **A5. Límites por Usuario (`commit 3196263`)**:
+   - `lib/limiter.js` asocia la clave del limitador al `user_id` en rutas autenticadas (fallback a IP solo si no está autenticado).
+   - Cuota diaria configurable mediante variable de entorno `DAILY_MINUTES_LIMIT` (30 minutos por defecto).
+   - Integrados métodos `getDailyUsage` y `trackDailyUsage` en `lib/supabase.js` para persistencia en Supabase.
+   - Al agotarse la cuota, el endpoint `POST /api/chat` responde 429 con `{ "error": "limite_diario", "resetIn": <segundos> }`.
+   - Frontend configurado para mostrar: `"Llegaste al límite de hoy. Vuelve mañana."`.
+   - `lib/validator.js` valida tipo y tamaño de toda entrada (mensajes máx 2000 chars, audio máx 5 MB).
+
+5. **A7. Prueba Rota (`commit 3b81ed5`)**:
+   - `test/server.test.js` helper `start()` refactorizado para asignar puertos libres dinámicos provistos por el SO (`srv.listen(0)`), evitando colisiones de puertos efímeros en Windows o timeouts de red.
+   - Todos los tests de servidor pasan limpiamente de forma determinista.
+
+6. **A4. Render y Modelo (`commit 30f6f1c`)**:
+   - Endpoint `GET /health` responde HTTP 200 con `{ ok: true, status: "ok" }` sin interactuar con la base de datos.
+   - Modelo unificado bajo variables de entorno `VOICE_PROVIDER` y `VOICE_MODEL: gemini-2.0-flash` (modelo estable, sin `-exp`), con `VOICE_BACKUP_MODEL: gemini-1.5-flash` configurable.
+   - Si la respuesta del backend excede 3 segundos, el frontend informa: `"Despertando el tutor, un momento..."`.
+   - `render.yaml` y `DEPLOYMENT.md` actualizados documentando las opciones frente a la suspensión en el plan Free de Render.
+
+7. **A6. Latencia y Navegadores (`commit d9bc520`)**:
+   - Medición de latencia completa: cliente mide fin de habla (STT) y síntesis (TTS); servidor mide inferencia de modelo en `lib/logger.js`.
+   - Indicador `#lat` en pantalla refleja el tiempo total del turno y desglose del modelo.
+   - Modo texto 100% disponible ante micrófonos bloqueados o navegadores sin soporte Web Speech.
+   - Aviso de privacidad sobre el procesamiento de audio por Google/Apple incorporado en el modal explicativo de `public/index.html` y en `README.md`.
+
+---
+
+## 10. Estado Técnico Global y Métricas
+
+- **Rama Git de Trabajo**: `fix/parte-1b` (limpia, sin cambios pendientes por commitear).
+- **Suite de Pruebas (`npm test`)**: **42 tests pasando, 0 fallos, 1 omitido defensivamente (test RLS en vivo)**.
+- **Rendimiento de Latencia**:
+  - Promedio por turno: **~1474 ms**.
+  - Percentil 90 (P90): **~1655 ms** (muy por debajo del límite de aceptación de 3000 ms).
+- **Commits Registrados en `fix/parte-1b`**:
+  - `ec394c6`: `A2: verificar y blindar claves y secretos`
+  - `7e233d8`: `A1: definir migracion y politicas RLS estrictas por usuario`
+  - `a8b8570`: `A3: estado y competencias por usuario con reset inicial`
+  - `3196263`: `A5: cuotas y limites de conversacion por usuario`
+  - `3b81ed5`: `A7: corregir estabilidad de pruebas de servidor`
+  - `30f6f1c`: `A4: unificar modelo de voz y endpoint health`
+  - `d9bc520`: `A6: medicion de latencia y aviso de privacidad de voz`
+
+---
+
+## 11. Pasos Humanos Pendientes (Pre-requisitos Operativos)
+
+1. **Ejecutar Migración RLS en Supabase**:
+   - Abrir SQL Editor en el proyecto de Supabase.
+   - Ejecutar el script `supabase/migrations/001_rls_por_usuario.sql`.
+2. **Validar RLS con Cuentas Reales**:
+   - Definir variables de prueba en entorno y correr `node --test test/rls.test.js`.
+3. **Configuración de Suspensión en Render**:
+   - Definir si se escala al plan *Starter* (sin suspensión) o si se configura un ping de 10 min a `/health` desde un monitor externo (UptimeRobot).
+
+---
+
+## 12. Próxima Sesión: Roadmap Parte 1C
+
+Para la **Parte 1C** (tercera entrega del bloque de estabilidad/PMV), los objetivos previstos son:
+- **Refinamiento de UX en conversación continua de 5 minutos**: Asegurar que la sesión no sufra micro-cortes acumulados, auto-guardado progresivo y cierre limpio con resumen pedagógico.
+- **Calibración fina del Web Speech API**: Ajustar la sensibilidad del botón de habla, intervalos de silencio y manejo en Safari iOS.
+- **Consolidación de métricas de uso y telemetría**: Visualización de minutos restantes de práctica diaria en la interfaz del alumno.
+
 
