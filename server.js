@@ -38,6 +38,10 @@ if (process.env.NODE_ENV === "production" && !supabase.isConfigured) {
   process.exit(1);
 }
 
+// Limitadores para recuperación de contraseñas: por IP y por correo (máx 5 solicitudes por 15 minutos)
+const resetPasswordIpLimiter = new RateLimiter({ windowMs: 15 * 60_000, maxRequests: 5 });
+const resetPasswordEmailLimiter = new RateLimiter({ windowMs: 15 * 60_000, maxRequests: 5 });
+
 // Rate limiter: Máximo de solicitudes por minuto por cliente (usa user_id si está autenticado, sino IP)
 const sessionLimiter = new RateLimiter({ windowMs: 60_000, maxRequests: Number(process.env.MAX_SESSIONS_PER_MIN || 15) });
 // User Usage Limiter: control por minuto (máx 15 turnos) y cuota diaria configurable guardada en Supabase (por defecto 30 minutos)
@@ -127,14 +131,43 @@ const routes = {
   },
 
   "POST /api/auth/reset-password": async (req, res, url) => {
-    try {
-      const b = await json(req);
-      const result = await supabase.recoverPassword(b);
-      logger.info("password_recovery_requested", { email: b.email }, "auth");
-      send(res, 200, result);
-    } catch (err) {
-      send(res, 400, { error: err.message || "No pudimos procesar la recuperación de contraseña." });
+    const clientIp = getClientIp(req);
+    const ipCheck = resetPasswordIpLimiter.isAllowed(clientIp);
+    if (!ipCheck.allowed) {
+      logger.warn("password_reset_ip_limit_exceeded", { ip: clientIp, resetInSeconds: ipCheck.resetInSeconds }, "auth");
+      return send(res, 429, { error: `Demasiados intentos desde esta IP. Intenta de nuevo en ${ipCheck.resetInSeconds} segundos.` }, "application/json", { "Retry-After": String(ipCheck.resetInSeconds) });
     }
+
+    let b;
+    try {
+      b = await json(req);
+    } catch {
+      b = {};
+    }
+
+    const cleanEmail = String(b.email || "").trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      return send(res, 400, { error: "Ingresa un correo electrónico válido para recuperar tu contraseña." });
+    }
+
+    const emailCheck = resetPasswordEmailLimiter.isAllowed(cleanEmail);
+    if (!emailCheck.allowed) {
+      logger.warn("password_reset_email_limit_exceeded", { email: cleanEmail, resetInSeconds: emailCheck.resetInSeconds }, "auth");
+      return send(res, 429, { error: `Demasiadas solicitudes para este correo. Intenta de nuevo en ${emailCheck.resetInSeconds} segundos.` }, "application/json", { "Retry-After": String(emailCheck.resetInSeconds) });
+    }
+
+    try {
+      await supabase.recoverPassword({ email: cleanEmail });
+      logger.info("password_recovery_requested", { email: cleanEmail }, "auth");
+    } catch (err) {
+      logger.warn("password_recovery_error", { email: cleanEmail, error: err.message }, "auth");
+    }
+
+    // Respuesta SIEMPRE idéntica, exista o no el correo (anti enumeración de usuarios)
+    send(res, 200, {
+      ok: true,
+      message: "Si la cuenta existe, se ha enviado un enlace a tu correo para restablecer tu contraseña.",
+    });
   },
 
   "GET /api/auth/me": (req, res, url) => {

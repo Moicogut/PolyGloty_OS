@@ -70,3 +70,93 @@ test("SupabaseAdapter: registro, hashing de contraseñas y login local defensivo
   }
 });
 
+test("C7: POST /api/auth/reset-password responde idéntico para correo existente o inexistente y limita por IP y correo", async () => {
+  const { spawn } = await import("node:child_process");
+  const http = await import("node:http");
+
+  async function getPort() {
+    return new Promise((resolve) => {
+      const s = http.createServer();
+      s.listen(0, "127.0.0.1", () => {
+        const p = s.address().port;
+        s.close(() => resolve(p));
+      });
+    });
+  }
+
+  const port = await getPort();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pvreset-"));
+  fs.cpSync(path.resolve(import.meta.dirname, ".."), dir, {
+    recursive: true,
+    filter: (s) => !s.includes("node_modules") && !s.endsWith("state.json") && !s.endsWith(".env"),
+  });
+
+  const proc = spawn("node", ["server.js"], {
+    cwd: dir,
+    env: { ...process.env, PORT: String(port), HOST: "127.0.0.1", NODE_ENV: "development" },
+    stdio: "ignore",
+  });
+
+  for (let i = 0; i < 50; i++) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/health`);
+      if (res.ok) break;
+    } catch {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+
+  const base = `http://127.0.0.1:${port}`;
+
+  try {
+    // 1. Correo existente
+    await fetch(`${base}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: base },
+      body: JSON.stringify({ email: "existente@example.com", password: "Password123!" }),
+    });
+
+    const resExistente = await fetch(`${base}/api/auth/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: base },
+      body: JSON.stringify({ email: "existente@example.com" }),
+    });
+    const dataExistente = await resExistente.json();
+
+    // 2. Correo inexistente
+    const resInexistente = await fetch(`${base}/api/auth/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: base },
+      body: JSON.stringify({ email: "fantasma_inexistente@example.com" }),
+    });
+    const dataInexistente = await resInexistente.json();
+
+    // Comprobar que ambas respuestas son exactamente idénticas
+    assert.equal(resExistente.status, 200);
+    assert.equal(resInexistente.status, 200);
+    assert.deepEqual(dataExistente, dataInexistente);
+    assert.equal(dataExistente.message, "Si la cuenta existe, se ha enviado un enlace a tu correo para restablecer tu contraseña.");
+
+    // 3. Rate limiting por correo: realizar múltiples peticiones para el mismo correo hasta agotar cuota
+    const targetEmail = "spam_test@example.com";
+    let reachedLimit = false;
+    for (let i = 0; i < 7; i++) {
+      const r = await fetch(`${base}/api/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: base },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      if (r.status === 429) {
+        reachedLimit = true;
+        const errJson = await r.json();
+        assert.ok(errJson.error.includes("Demasiad"));
+        break;
+      }
+    }
+    assert.equal(reachedLimit, true, "Debe limitar por correo o por IP tras exceder intentos");
+  } finally {
+    proc.kill();
+  }
+});
+
+

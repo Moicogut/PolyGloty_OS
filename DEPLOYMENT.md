@@ -110,6 +110,11 @@ Render permite alojar aplicaciones Node.js con HTTPS gratis (ideal para Web Spee
 
 4. **Flujo de Cuentas y Recuperación:**
    - Endpoint `POST /api/auth/reset-password` integrado con Supabase Auth y persistencia local defensiva.
+   - Respuestas uniformes anti-enumeración de usuarios (responde idéntico exista o no el correo) y limitadores por IP y por correo (máx 5 peticiones por 15 minutos).
+   - **Configuración obligatoria de Redirect URL en Supabase Dashboard:**
+     Para que el enlace enviado por correo redirija correctamente a la aplicación, la URL base del despliegue (ej. `https://polyglot-voice.onrender.com` o el dominio de producción) debe agregarse explícitamente en:
+     *Supabase Project Dashboard -> Authentication -> URL Configuration -> Redirect URLs* (ej. `https://tu-dominio.com/*` o `http://localhost:3000/*` en desarrollo local).
+     Si la URL de redirección no está permitida en dicha lista blanca, Supabase rechazará la redirección por motivos de seguridad.
    - Mensajes limpios en español claro, sin códigos de error técnicos.
 
 5. **Enfoque MVP Inglés:**
