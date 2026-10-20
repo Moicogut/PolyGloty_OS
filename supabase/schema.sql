@@ -85,36 +85,43 @@ DROP POLICY IF EXISTS "Users can only read and write their own competencies" ON 
 DROP POLICY IF EXISTS "Users can only read and write their own conversations" ON public.conversations;
 DROP POLICY IF EXISTS "Users can only read and write their own vocab" ON public.session_vocab;
 
--- Políticas estrictas: Cada usuario solo puede leer y modificar sus propios datos
--- Permite acceso directo mediante auth.uid() = user_id o mediante SERVICE_ROLE del backend
+-- Revocar acceso a anon y limitar a authenticated y service_role
+REVOKE ALL ON public.profiles FROM anon;
+REVOKE ALL ON public.cards FROM anon;
+REVOKE ALL ON public.competencies FROM anon;
+REVOKE ALL ON public.conversations FROM anon;
+REVOKE ALL ON public.session_vocab FROM anon;
 
-CREATE POLICY "Users can only read and write their own profile"
-  ON public.profiles
-  FOR ALL
-  USING (auth.uid()::text = id OR auth.role() = 'service_role')
-  WITH CHECK (auth.uid()::text = id OR auth.role() = 'service_role');
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.cards TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.competencies TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.conversations TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.session_vocab TO authenticated, service_role;
 
-CREATE POLICY "Users can only read and write their own cards"
-  ON public.cards
-  FOR ALL
-  USING (auth.uid()::text = user_id OR auth.role() = 'service_role')
-  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+-- Políticas estrictas por operación para usuarios autenticados:
+CREATE POLICY "profiles_select_own" ON public.profiles FOR SELECT TO authenticated USING (id = auth.uid()::text);
+CREATE POLICY "profiles_insert_own" ON public.profiles FOR INSERT TO authenticated WITH CHECK (id = auth.uid()::text);
+CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE TO authenticated USING (id = auth.uid()::text) WITH CHECK (id = auth.uid()::text);
+CREATE POLICY "profiles_delete_own" ON public.profiles FOR DELETE TO authenticated USING (id = auth.uid()::text);
 
-CREATE POLICY "Users can only read and write their own competencies"
-  ON public.competencies
-  FOR ALL
-  USING (auth.uid()::text = user_id OR auth.role() = 'service_role')
-  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+CREATE POLICY "cards_select_own" ON public.cards FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
+CREATE POLICY "cards_insert_own" ON public.cards FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "cards_update_own" ON public.cards FOR UPDATE TO authenticated USING (user_id = auth.uid()::text) WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "cards_delete_own" ON public.cards FOR DELETE TO authenticated USING (user_id = auth.uid()::text);
 
-CREATE POLICY "Users can only read and write their own conversations"
-  ON public.conversations
-  FOR ALL
-  USING (auth.uid()::text = user_id OR auth.role() = 'service_role')
-  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+CREATE POLICY "competencies_select_own" ON public.competencies FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
+CREATE POLICY "competencies_insert_own" ON public.competencies FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "competencies_update_own" ON public.competencies FOR UPDATE TO authenticated USING (user_id = auth.uid()::text) WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "competencies_delete_own" ON public.competencies FOR DELETE TO authenticated USING (user_id = auth.uid()::text);
 
-CREATE POLICY "Users can only read and write their own vocab"
-  ON public.session_vocab
-  FOR ALL
-  USING (auth.uid()::text = user_id OR auth.role() = 'service_role')
-  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+CREATE POLICY "conversations_select_own" ON public.conversations FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
+CREATE POLICY "conversations_insert_own" ON public.conversations FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "conversations_update_own" ON public.conversations FOR UPDATE TO authenticated USING (user_id = auth.uid()::text) WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "conversations_delete_own" ON public.conversations FOR DELETE TO authenticated USING (user_id = auth.uid()::text);
+
+CREATE POLICY "vocab_select_own" ON public.session_vocab FOR SELECT TO authenticated USING (user_id = auth.uid()::text);
+CREATE POLICY "vocab_insert_own" ON public.session_vocab FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "vocab_update_own" ON public.session_vocab FOR UPDATE TO authenticated USING (user_id = auth.uid()::text) WITH CHECK (user_id = auth.uid()::text);
+CREATE POLICY "vocab_delete_own" ON public.session_vocab FOR DELETE TO authenticated USING (user_id = auth.uid()::text);
+
 

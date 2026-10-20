@@ -12,7 +12,7 @@
 | Tarea | Estado | Evidencia | Pendiente Humano |
 |---|---|---|---|
 | **A2. Claves y Secretos** | DONE | `git log --all -- .env` vacío. `grep` en `public/` (sk-, AIza, eyJ, apiKey, service_role) = 0 hallazgos. `gemini-live.js` solo recibe token efímero vía constructor. `SUPABASE_KEY` solo opera en `lib/supabase.js` en backend. `estado-polyglot.txt` eliminado y añadido a `.gitignore`. `npm test` verde (41/41). | Ninguno. Claves seguras en servidor. |
-| **A1. RLS Abierto (Bloqueante)** | PENDIENTE | Por crear migración `001_rls_por_usuario.sql` y `test/rls.test.js`. | Aplicar migración SQL en consola Supabase y testear con 2 cuentas. |
+| **A1. RLS Abierto (Bloqueante)** | DONE | Creada migración `supabase/migrations/001_rls_por_usuario.sql` revocando `anon`, asignando políticas por operación (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) con `auth.uid() = user_id`. `supabase/schema.sql` sincronizado. `test/rls.test.js` implementado con skip defensivo ante ausencia de credenciales. `npm test` verde (41 passing, 1 skipped). | PASO HUMANO: Ejecutar `001_rls_por_usuario.sql` en SQL Editor de Supabase y correr `test/rls.test.js` con 2 cuentas de prueba. |
 | **A3. Estado por Usuario** | PENDIENTE | Por auditar `lib/store.js` y persistencia por inquilino. | Ninguno. |
 | **A5. Límites por Usuario** | PENDIENTE | Por enlazar `DAILY_MINUTES_LIMIT` con user_id. | Ninguno. |
 | **A7. Prueba Rota** | PENDIENTE | Verificado: test de endpoints y validación defensiva pasando 41/41. | Ninguno. |
