@@ -65,16 +65,56 @@ CREATE TABLE IF NOT EXISTS public.session_vocab (
   added_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. Habilitar Row Level Security (RLS)
+-- 6. Habilitar Row Level Security (RLS) en TODAS las tablas
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.competencies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.session_vocab ENABLE ROW LEVEL SECURITY;
 
--- Políticas de acceso para servicio y usuarios autenticados
-CREATE POLICY "Public profiles access" ON public.profiles FOR ALL USING (true);
-CREATE POLICY "Cards user access" ON public.cards FOR ALL USING (true);
-CREATE POLICY "Competencies user access" ON public.competencies FOR ALL USING (true);
-CREATE POLICY "Conversations user access" ON public.conversations FOR ALL USING (true);
-CREATE POLICY "Vocab user access" ON public.session_vocab FOR ALL USING (true);
+-- Limpieza de políticas anteriores
+DROP POLICY IF EXISTS "Public profiles access" ON public.profiles;
+DROP POLICY IF EXISTS "Cards user access" ON public.cards;
+DROP POLICY IF EXISTS "Competencies user access" ON public.competencies;
+DROP POLICY IF EXISTS "Conversations user access" ON public.conversations;
+DROP POLICY IF EXISTS "Vocab user access" ON public.session_vocab;
+
+DROP POLICY IF EXISTS "Users can only read and write their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can only read and write their own cards" ON public.cards;
+DROP POLICY IF EXISTS "Users can only read and write their own competencies" ON public.competencies;
+DROP POLICY IF EXISTS "Users can only read and write their own conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Users can only read and write their own vocab" ON public.session_vocab;
+
+-- Políticas estrictas: Cada usuario solo puede leer y modificar sus propios datos
+-- Permite acceso directo mediante auth.uid() = user_id o mediante SERVICE_ROLE del backend
+
+CREATE POLICY "Users can only read and write their own profile"
+  ON public.profiles
+  FOR ALL
+  USING (auth.uid()::text = id OR auth.role() = 'service_role')
+  WITH CHECK (auth.uid()::text = id OR auth.role() = 'service_role');
+
+CREATE POLICY "Users can only read and write their own cards"
+  ON public.cards
+  FOR ALL
+  USING (auth.uid()::text = user_id OR auth.role() = 'service_role')
+  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+
+CREATE POLICY "Users can only read and write their own competencies"
+  ON public.competencies
+  FOR ALL
+  USING (auth.uid()::text = user_id OR auth.role() = 'service_role')
+  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+
+CREATE POLICY "Users can only read and write their own conversations"
+  ON public.conversations
+  FOR ALL
+  USING (auth.uid()::text = user_id OR auth.role() = 'service_role')
+  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+
+CREATE POLICY "Users can only read and write their own vocab"
+  ON public.session_vocab
+  FOR ALL
+  USING (auth.uid()::text = user_id OR auth.role() = 'service_role')
+  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+
