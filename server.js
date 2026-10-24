@@ -22,6 +22,7 @@ import {
   validateCoopMatchPayload,
   validateCoopTurnPayload,
   validateAcousticGopPayload,
+  validatePeerFeedbackPayload,
   ValidationError,
 } from "./lib/validator.js";
 import { logger } from "./lib/logger.js";
@@ -40,6 +41,7 @@ import {
 import {
   matchOrCreateRoom,
   recordCoopTurn,
+  recordPeerFeedback,
   checkCoopSilence,
   leaveCoopRoom,
   coopMemoryStore,
@@ -52,6 +54,8 @@ import {
 
 import {
   buildPedagogicalSystemInstruction,
+  buildCoopFacilitatorSystemInstruction,
+  filterAndSanitizePeerFeedback,
   adaptMissionForLevel,
   GEMINI_PEDAGOGICAL_SCHEMA,
   repairAndGuaranteePedagogicalResponse,
@@ -430,6 +434,75 @@ const routes = {
       send(res, 200, result);
     } catch (err) {
       send(res, 400, { error: err.message || "Error al abandonar sala Co-Op" });
+    }
+  },
+
+  "POST /api/coop/peer-feedback": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validatePeerFeedbackPayload(b);
+      const state = resolveTenantStore(req, url);
+
+      const sanitized = filterAndSanitizePeerFeedback(payload.rawFeedback, {
+        authorName: "Colega",
+        recipientName: "Compañero",
+      });
+
+      const feedbackResult = recordPeerFeedback({
+        roomId: payload.roomId,
+        authorUserId: state.tenantId,
+        recipientUserId: payload.recipientUserId,
+        rawFeedback: payload.rawFeedback,
+        sanitizedFeedback: sanitized.sanitizedText,
+        score: payload.score,
+        tags: sanitized.tags,
+        badgeAwarded: sanitized.badgeAwarded,
+      });
+
+      logger.info("coop_peer_feedback_recorded", {
+        tenantId: state.tenantId,
+        roomId: payload.roomId,
+        recipientUserId: payload.recipientUserId,
+        positivityScore: sanitized.positivityScore,
+      });
+
+      send(res, 200, {
+        ok: true,
+        sanitizedFeedback: sanitized.sanitizedText,
+        sentiment: sanitized.sentiment,
+        positivityScore: sanitized.positivityScore,
+        tags: sanitized.tags,
+        badgeAwarded: sanitized.badgeAwarded,
+        recipientFeedbackScore: feedbackResult.recipientFeedbackScore,
+      });
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al procesar el peer review" });
+    }
+  },
+
+  "GET /api/coop/facilitator-prompt": (req, res, url) => {
+    try {
+      const roomId = url.searchParams.get("roomId");
+      if (!roomId) return send(res, 400, { error: "El parámetro roomId es obligatorio" });
+      const room = coopMemoryStore.get(roomId);
+      if (!room) return send(res, 404, { error: "Sala no encontrada" });
+
+      const word = url.searchParams.get("word");
+      const painType = url.searchParams.get("painType");
+      const phoneticPain = word ? { word, painType } : null;
+
+      const sortedByTime = [...room.members].sort((a, b) => a.talkingTimeSeconds - b.talkingTimeSeconds);
+      const suggestedSpeaker = sortedByTime[0] || null;
+
+      const prompt = buildCoopFacilitatorSystemInstruction({
+        room,
+        suggestedSpeaker,
+        phoneticPain,
+      });
+
+      send(res, 200, { ok: true, prompt, suggestedSpeaker: suggestedSpeaker?.name || null });
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al generar instrucción de facilitador" });
     }
   },
 

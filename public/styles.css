@@ -3989,5 +3989,347 @@ button.danger:hover:not(:disabled) {
   }
 }
 
+/* ==========================================================================
+   FASE II: SALAS DE MICROGRUPOS CO-OP Y MAPA DE FORMANTES GOP
+   ========================================================================== */
+
+/* Banner en Student Hub */
+.hub-coop-banner {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(6, 182, 212, 0.15));
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.coop-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-light);
+  color: #818cf8;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: fit-content;
+}
+
+.coop-domain-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+
+.coop-domain-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.coop-domain-btn:hover,
+.coop-domain-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+/* Panel Principal de Sala Co-Op */
+.panel-coop {
+  padding: 20px 16px 120px 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.coop-room-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+}
+
+.coop-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+}
+
+.coop-code-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coop-code-tag {
+  background: var(--bg-input);
+  border: 1px solid var(--border-focus);
+  color: var(--secondary);
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.coop-task-box {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.coop-task-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-main);
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+}
+
+.coop-task-steps {
+  margin: 10px 0 0 16px;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.coop-task-steps li {
+  margin-bottom: 4px;
+}
+
+/* Roster de Participantes y Radar de Talking Time */
+.coop-roster-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.coop-members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.coop-member-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.coop-member-card.is-active-speaker {
+  border-color: var(--secondary);
+  box-shadow: 0 0 14px var(--secondary-glow);
+}
+
+.coop-member-card.needs-boost {
+  border-color: var(--accent-gold);
+}
+
+.coop-member-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.coop-member-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.coop-member-role-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-muted);
+}
+
+.coop-talking-meter {
+  height: 6px;
+  background: var(--bg-input);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.coop-talking-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.3s ease;
+}
+
+.coop-talking-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* Mensaje de Wetty Facilitadora */
+.coop-facilitator-banner {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(16, 185, 129, 0.12));
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.coop-wetty-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid var(--primary);
+  flex-shrink: 0;
+}
+
+.coop-facilitator-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-main);
+}
+
+/* WIDGET INTERACTIVO DE MAPA DE FORMANTES F1/F2 */
+.formant-map-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-width: 640px;
+  width: 100%;
+}
+
+.formant-trapezoid-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 16px auto;
+  aspect-ratio: 4 / 3;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.formant-svg-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.formant-axis-lbl {
+  fill: var(--text-dim);
+  font-size: 11px;
+  font-family: var(--font-family);
+  font-weight: 600;
+}
+
+.formant-dot-target {
+  fill: var(--accent-green);
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+}
+
+.formant-dot-observed {
+  fill: var(--accent-danger);
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
+}
+
+.formant-legend-row {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.formant-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.formant-legend-color {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+}
+
+.formant-guide-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.formant-bio-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.formant-bio-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.formant-bio-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.formant-recasting-box {
+  background: rgba(99, 102, 241, 0.1);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 10px 14px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+
 
 

@@ -587,4 +587,50 @@ Se implementó el módulo de auditoría de suficiencia lingüística para medir 
 - **Suite Completa del Proyecto**: `npm test` (**86 tests ejecutados, 85 pasando, 0 fallos, 1 omitido por RLS remoto**).
 - **Latencia conversacional**: Mantenida en 1474 ms promedio y P90 de 1655 ms.
 
+---
+
+## 24. Fase II - Sprint 2.2: Facilitación Co-Op TBLT, Seguridad Psicológica y Mapa de Formantes F1/F2
+
+### 24.1 Integración del Rol de Wetty como Facilitadora Co-Op (`lib/pedagogicalAgent.js`)
+- **`buildCoopFacilitatorSystemInstruction({ room, suggestedSpeaker, silentMember, phoneticPain })`**:
+  - Incorpora principios pedagógicos TBLT (Task-Based Language Teaching) para grupos de 2 a 6 adultos.
+  - Moderación dinámica de turnos: detecta y cede la palabra automáticamente a participantes con baja participación ($< 50\%$ de la media) para evitar monopolios de voz.
+  - Disparador de silencios prolongados ($> 5$s): inyecta estímulos cálidos, respetuosos y no punitivos que reactivan la inercia comunicativa sin generar ansiedad.
+  - Sincronización del motor GOP: inyecta *recasting* fonético empático de forma implícita (modelado nativo dentro de la réplica de Wetty sin descalificaciones directas).
+
+### 24.2 Filtro de Seguridad Psicológica para Peer Review (`lib/pedagogicalAgent.js` y `server.js`)
+- **`filterAndSanitizePeerFeedback(rawText, { authorName, recipientName })`**:
+  - Neutraliza expresiones punitivas comunes del hispanohablante ("hablas muy mal", "tu pronunciación es pésima", "no se te entiende nada", "muy lento").
+  - Reencuadra el mensaje bajo la metodología *Praise Sandwich*:
+    1. **Alabanza Inicial**: Reconocimiento de valentía y participación activa en el equipo.
+    2. **Área de Afinamiento**: Sugerencia constructiva enfocada en ritmo, pausas o sonidos clave.
+    3. **Aliento Final**: Frase motivacional de alta autoeficacia orientada al aprendizaje conjunto.
+  - Asigna métricas de sentimiento (`constructive_neutralized` / `motivating_supportive`), score de positividad (88-98%) e insignias pedagógicas (ej. *🤝 Colaborador Destacado*, *🌟 Impulsor del Equipo*).
+- **Endpoint `POST /api/coop/peer-feedback`**:
+  - Valida payload de forma defensiva (`roomId`, `recipientUserId`, `score` 1–5, `rawFeedback`).
+  - Almacena el review en memoria y en auditoría Supabase actualizando el `peerFeedbackScore` del destinatario.
+- **Endpoint `GET /api/coop/facilitator-prompt`**:
+  - Retorna la instrucción contextualizada para Wetty en sala en vivo con orador sugerido y recasting fonético.
+
+### 24.3 Widget Visual de Mapa de Formantes F1/F2 y UI de Salas (`public/index.html`, `public/app.js`, `public/styles.css`)
+- **Componente Trapecio Vocálico F1/F2 (`#formantMapModal`)**:
+  - Visualización SVG interactiva del trapecio vocálico estándar IPA con ejes F1 (mandíbula cerrada a abierta, 200 a 900 Hz) y F2 (lengua posterior a anterior, 800 a 2600 Hz).
+  - Posicionamiento matemático preciso de fonemas canónicos (/iː/, /ɪ/, /e/, /æ/, /ʌ/, /ɑː/, /ɔː/, /ʊ/, /uː/, /ə/).
+  - Renderizado dinámico de vector y puntos: punto objetivo (verde esmeralda `#10b981`) vs punto observado del estudiante (rojo/ámbar `#ef4444`).
+  - Guía biomecánica anatómica: apertura de mandíbula en mm y desplazamiento del cuerpo lingual.
+  - Caja de recasting y tips articulatorios de Wetty.
+- **Panel de Sala Co-Op (`section#coop`)**:
+  - Vista de Smart Matchmaking por nivel (A1–C1), dominio profesional (Tech, Medical, Corporate, General) y capacidad (2 a 6 personas).
+  - Vista de Sala Activa con temporizador regresivo de 15 minutos, código de sala, tarjeta de misión TBLT con pasos negociables, banner en vivo de intervención de Wetty y roster de participantes con barras de Talking Time en tiempo real.
+  - Modal de Peer Review interactivo con reformulación automática previa al envío.
+- **Navegación Móvil y Hub**:
+  - Botón de pestaña Co-Op (`data-tab="coop"`) en la barra inferior nativa.
+  - Banner de acceso directo y selector de chips en `#hubView`.
+
+### 24.4 Resultados y Verificación (DoD)
+- **Suite de Pruebas Co-Op & GOP**: `test/coop_gop.test.js` (**17/17 tests pasando al 100%**).
+- **Suite Completa del Proyecto**: `npm test` (**90 tests ejecutados, 89 pasando, 0 fallos, 1 omitido por RLS remoto sin credenciales**).
+- **Cero Regresiones**: Compatibilidad total con el flujo de práctica individual, auditoría de suficiencia (Fase 3), algoritmos YIN y persistencia híbrida.
+
+
 

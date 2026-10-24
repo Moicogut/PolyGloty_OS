@@ -2353,6 +2353,7 @@ function switchTab(target) {
   if (t === "review") loadReview();
   if (t === "tones") loadDrills();
   if (t === "progress") paintProgress();
+  if (t === "coop") loadAndRenderCoop();
 }
 
 document.querySelectorAll(".tabs button, .bottom-nav button").forEach((b) => {
@@ -2379,6 +2380,426 @@ async function refresh() {
   if (status() === "Despertando el tutor, un momento…") {
     status("Listo: presiona 'Empezar' para abrir la sesión.");
   }
+}
+
+// ============================================================================
+// FASE II: MÓDULO SOCIAL CO-OP TBLT & MAPA ARTICULATORIO DE FORMANTES (GOP)
+// ============================================================================
+
+let activeCoopRoom = null;
+let coopTimerInterval = null;
+let coopSilenceCheckInterval = null;
+let coopRemainingSeconds = 900; // 15 minutos de misión TBLT
+
+// Mapeo anatómico de F1/F2 al SVG del trapecio vocálico IPA
+function mapF1F2ToSvg(f1, f2) {
+  const clampedF1 = Math.min(950, Math.max(180, f1 || 500));
+  const clampedF2 = Math.min(2700, Math.max(700, f2 || 1500));
+  
+  // Normalización: F1 (200-900 Hz, mandíbula cerrada a abierta)
+  const normF1 = (clampedF1 - 200) / (900 - 200);
+  // F2 (2600-800 Hz, lengua anterior a posterior)
+  const normF2 = (2600 - clampedF2) / (2600 - 800);
+  
+  // El trapecio se estrecha abajo: arriba 40 a 360, abajo 110 a 290
+  const leftX = 40 + normF1 * (110 - 40);
+  const rightX = 360 - normF1 * (360 - 290);
+  
+  const x = Math.round(leftX + normF2 * (rightX - leftX));
+  const y = Math.round(30 + normF1 * (260 - 30));
+  return { x, y };
+}
+
+function loadAndRenderCoop() {
+  if (!activeCoopRoom) {
+    if ($("#coopMatchView")) $("#coopMatchView").hidden = false;
+    if ($("#coopActiveRoomView")) $("#coopActiveRoomView").hidden = true;
+    
+    const nameInput = $("#coopCandidateName");
+    if (nameInput && !nameInput.value) {
+      nameInput.value = currentUser?.email?.split("@")[0] || "Compañero Dev";
+    }
+    return;
+  }
+
+  if ($("#coopMatchView")) $("#coopMatchView").hidden = true;
+  if ($("#coopActiveRoomView")) $("#coopActiveRoomView").hidden = false;
+
+  renderCoopActiveRoom();
+}
+
+function renderCoopActiveRoom() {
+  if (!activeCoopRoom) return;
+
+  // Header
+  const codeEl = $("#coopRoomCode");
+  if (codeEl) codeEl.textContent = activeCoopRoom.room_code || `#${activeCoopRoom.id?.slice(0, 8)}`;
+
+  const badgeEl = $("#coopRoomDomainBadge");
+  if (badgeEl) badgeEl.textContent = `${activeCoopRoom.professional_domain?.toUpperCase()} · ${activeCoopRoom.level_cefr}`;
+
+  // TBLT Task
+  const task = activeCoopRoom.target_task || {};
+  if ($("#coopTaskTitle")) $("#coopTaskTitle").textContent = task.title || "Misión Colaborativa";
+  if ($("#coopTaskScenario")) $("#coopTaskScenario").textContent = task.scenario || "Resuelvan la tarea comunicándose en inglés.";
+  
+  const stepsList = $("#coopTaskSteps");
+  if (stepsList && Array.isArray(task.steps)) {
+    stepsList.innerHTML = task.steps.map((st) => `<li>${st}</li>`).join("");
+  }
+
+  // Members Grid & Talking Time
+  renderCoopMembers();
+}
+
+function renderCoopMembers() {
+  const grid = $("#coopMembersGrid");
+  if (!grid || !activeCoopRoom) return;
+
+  const members = activeCoopRoom.members || [];
+  const currentUserId = currentUser?.id || "guest";
+
+  grid.innerHTML = members.map((m) => {
+    const isMe = m.userId === currentUserId;
+    const isNextSpeaker = activeCoopRoom.suggestedNextSpeaker?.userId === m.userId;
+    const duration = m.talkingTimeSeconds || 0;
+    const percentage = m.talkingPercentage || (members.length > 0 ? Math.round(100 / members.length) : 0);
+    const needsEncouragement = m.needsEncouragement;
+
+    return `
+      <div class="coop-member-card ${isNextSpeaker ? "is-active-speaker" : ""} ${needsEncouragement ? "needs-boost" : ""}">
+        <div class="coop-member-head">
+          <span class="coop-member-name">${m.name || "Participante"} ${isMe ? "(Tú)" : ""}</span>
+          <span class="coop-member-role-badge">${m.role === "host" ? "👑 Host" : "Miembro"}</span>
+        </div>
+        <div class="coop-talking-meter">
+          <div class="coop-talking-bar" style="width: ${percentage}%;"></div>
+        </div>
+        <div class="coop-talking-stat">
+          <span>${percentage}% voz (${duration}s)</span>
+          <span>${isNextSpeaker ? "👉 Turno sugerido" : (needsEncouragement ? "⚠️ Apoyar" : "En línea")}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function joinOrMatchCoopRoom() {
+  const findBtn = $("#coopFindRoomBtn");
+  if (findBtn) {
+    findBtn.disabled = true;
+    findBtn.textContent = "Emparejando sala...";
+  }
+
+  const candidateName = ($("#coopCandidateName")?.value || "").trim() || currentUser?.email?.split("@")[0] || "Compañero";
+  const level = $("#coopLevelSelect")?.value || "A2";
+  const domain = $("#coopDomainSelect")?.value || "tech";
+  const maxCapacity = parseInt($("#coopCapacitySelect")?.value || "4", 10);
+
+  try {
+    const res = await post("/api/coop/match", {
+      candidateName,
+      level,
+      domain,
+      maxCapacity,
+    });
+
+    activeCoopRoom = res.room;
+    toast(res.isNewRoom ? "¡Sala Co-Op creada! Eres el anfitrión." : "¡Te has unido a la sala Co-Op!");
+    
+    // Iniciar temporizador de 15 minutos
+    coopRemainingSeconds = 900;
+    startCoopTimer();
+
+    // Iniciar polling de silencios prolongados (>5s)
+    startCoopSilenceCheck();
+
+    loadAndRenderCoop();
+  } catch (err) {
+    toast("Error al conectar sala Co-Op: " + err.message);
+  } finally {
+    if (findBtn) {
+      findBtn.disabled = false;
+      findBtn.textContent = "🔍 Buscar o Crear Sala Co-Op";
+    }
+  }
+}
+
+function startCoopTimer() {
+  if (coopTimerInterval) clearInterval(coopTimerInterval);
+  updateCoopTimerDisplay();
+  coopTimerInterval = setInterval(() => {
+    coopRemainingSeconds--;
+    if (coopRemainingSeconds <= 0) {
+      clearInterval(coopTimerInterval);
+      toast("⏰ Tiempo de misión TBLT completado. ¡Gran trabajo en equipo!");
+    }
+    updateCoopTimerDisplay();
+  }, 1000);
+}
+
+function updateCoopTimerDisplay() {
+  const timerBadge = $("#coopTimerBadge");
+  if (!timerBadge) return;
+  const m = Math.floor(coopRemainingSeconds / 60);
+  const s = coopRemainingSeconds % 60;
+  timerBadge.textContent = `⏱️ ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function startCoopSilenceCheck() {
+  if (coopSilenceCheckInterval) clearInterval(coopSilenceCheckInterval);
+  coopSilenceCheckInterval = setInterval(async () => {
+    if (!activeCoopRoom?.id) return;
+    try {
+      const res = await get(`/api/coop/silence-check?roomId=${activeCoopRoom.id}`);
+      if (res.hasProlongedSilence && res.interventionPrompt?.facilitatorScript) {
+        if ($("#coopFacilitatorPrompt")) {
+          $("#coopFacilitatorPrompt").textContent = `"${res.interventionPrompt.facilitatorScript}"`;
+        }
+        if ($("#coopWettyStatus")) {
+          $("#coopWettyStatus").textContent = "Estimulando participación cálida";
+        }
+      }
+    } catch {
+      // Ignorar fallas transitorias de red
+    }
+  }, 5000);
+}
+
+async function takeCoopTurn() {
+  if (!activeCoopRoom?.id) return;
+  const turnBtn = $("#coopSimulateTurnBtn");
+  if (turnBtn) turnBtn.disabled = true;
+
+  const durationSec = Math.floor(Math.random() * 8) + 5; // 5-12 segundos
+  const transcripts = [
+    "I worked on the backend API migration and we need to deploy today.",
+    "I noticed the same issue with the ship container logs.",
+    "Can you help me verify the about page user routing?",
+    "I agree with the approach for our team standup."
+  ];
+  const chosenTranscript = transcripts[Math.floor(Math.random() * transcripts.length)];
+
+  try {
+    // 1. Simulación acústica GOP para verificar formantes
+    let gopScore = 85;
+    let painType = null;
+    let gopRes = null;
+
+    if (chosenTranscript.includes("ship")) {
+      gopRes = await post("/api/acoustic/gop-score", { word: "ship", f1: 290, f2: 2250 });
+      gopScore = gopRes.gopScore || 50;
+      painType = gopRes.painType;
+    } else if (chosenTranscript.includes("about")) {
+      gopRes = await post("/api/acoustic/gop-score", { word: "about", f1: 700, f2: 1400 });
+      gopScore = gopRes.gopScore || 52;
+      painType = gopRes.painType;
+    }
+
+    // 2. Registrar turno en el motor Co-Op
+    const turnRes = await post("/api/coop/turn", {
+      roomId: activeCoopRoom.id,
+      audioDurationSeconds: durationSec,
+      transcriptText: chosenTranscript,
+      gopScore,
+    });
+
+    // Actualizar estado de miembros
+    activeCoopRoom.members = activeCoopRoom.members.map((m) => {
+      const stat = turnRes.participationStats.find((s) => s.userId === m.userId);
+      if (stat) {
+        return {
+          ...m,
+          talkingTimeSeconds: stat.durationSeconds,
+          talkingPercentage: stat.percentage,
+          needsEncouragement: stat.needsEncouragement,
+        };
+      }
+      return m;
+    });
+    activeCoopRoom.suggestedNextSpeaker = turnRes.suggestedNextSpeaker;
+
+    renderCoopMembers();
+
+    // 3. Consultar prompt de Wetty con recasting fonético si hubo error
+    const promptRes = await get(`/api/coop/facilitator-prompt?roomId=${activeCoopRoom.id}`);
+    if (promptRes?.facilitatorTurnScript && $("#coopFacilitatorPrompt")) {
+      $("#coopFacilitatorPrompt").textContent = `"${promptRes.facilitatorTurnScript}"`;
+    }
+
+    // Si hubo desvío fonético, abrir automáticamente el widget de Mapa de Formantes
+    if (gopRes && !gopRes.nativeLevel && painType) {
+      toast("🎯 Desvío de pronunciación detectado. Abriendo Mapa de Formantes...");
+      setTimeout(() => openFormantMap(gopRes), 800);
+    } else {
+      toast(`🎙️ Turno registrado (${durationSec}s). Siguiente: ${turnRes.suggestedNextSpeaker?.name || "Compañero"}`);
+    }
+
+  } catch (err) {
+    toast("Error al registrar turno: " + err.message);
+  } finally {
+    if (turnBtn) turnBtn.disabled = false;
+  }
+}
+
+function openFormantMap(data = null) {
+  const modal = $("#formantMapModal");
+  if (!modal) return;
+
+  const defaultPain = {
+    targetPhoneme: "ɪ",
+    observedPhoneme: "iː",
+    painType: "lax_tense_collapse",
+    targetFormants: { f1: 400, f2: 1920 },
+    observedFormants: { f1: 290, f2: 2250 },
+    articulatoryGuide: {
+      jawPosition: "Relajada semi-cerrada (~12mm de apertura)",
+      tonguePosition: "Cuerpo lingual centralizado sin tensión anterior",
+      articulatoryTip: "No sonrías ni tenses como en 'sheep'. Deja caer la mandíbula un milímetro y haz un sonido corto y suave.",
+    },
+    recastingRecommendation: {
+      facilitatorTurn: "I noticed you said 'sheep' instead of 'ship'. Notice how a native speaker keeps the jaw relaxed for a short /ɪ/.",
+    },
+  };
+
+  const info = data || defaultPain;
+  const targetF = info.targetFormants || { f1: 400, f2: 1920 };
+  const observedF = info.observedFormants || { f1: 290, f2: 2250 };
+
+  const targetSvg = mapF1F2ToSvg(targetF.f1, targetF.f2);
+  const observedSvg = mapF1F2ToSvg(observedF.f1, observedF.f2);
+
+  // Actualizar puntos SVG
+  const targetDot = $("#formantTargetDot");
+  if (targetDot) {
+    targetDot.setAttribute("cx", targetSvg.x);
+    targetDot.setAttribute("cy", targetSvg.y);
+  }
+  const targetLbl = $("#formantTargetLbl");
+  if (targetLbl) {
+    targetLbl.setAttribute("x", targetSvg.x);
+    targetLbl.setAttribute("y", targetSvg.y + 18);
+    targetLbl.textContent = `/${info.targetPhoneme || "ɪ"}/ Objetivo`;
+  }
+
+  const observedDot = $("#formantObservedDot");
+  if (observedDot) {
+    observedDot.setAttribute("cx", observedSvg.x);
+    observedDot.setAttribute("cy", observedSvg.y);
+  }
+  const observedLbl = $("#formantObservedLbl");
+  if (observedLbl) {
+    observedLbl.setAttribute("x", observedSvg.x);
+    observedLbl.setAttribute("y", observedSvg.y - 12);
+    observedLbl.textContent = `/${info.observedPhoneme || "iː"}/ Pronunciado`;
+  }
+
+  const vectorLine = $("#formantVectorLine");
+  if (vectorLine) {
+    vectorLine.setAttribute("x1", observedSvg.x);
+    vectorLine.setAttribute("y1", observedSvg.y);
+    vectorLine.setAttribute("x2", targetSvg.x);
+    vectorLine.setAttribute("y2", targetSvg.y);
+  }
+
+  // Guía anatómica y recasting
+  if ($("#formantBioJaw")) $("#formantBioJaw").textContent = info.articulatoryGuide?.jawPosition || "Relajada semi-cerrada";
+  if ($("#formantBioTongue")) $("#formantBioTongue").textContent = info.articulatoryGuide?.tonguePosition || "Posición centralizada";
+  if ($("#formantRecastingText")) {
+    const tip = info.articulatoryGuide?.articulatoryTip || info.recastingRecommendation?.facilitatorTurn || "Practica la relajación mandibular.";
+    $("#formantRecastingText").textContent = `"${tip}"`;
+  }
+
+  modal.hidden = false;
+}
+
+function openPeerReviewModal() {
+  if (!activeCoopRoom) {
+    toast("Debes estar en una sala Co-Op activa para dar peer review.");
+    return;
+  }
+
+  const select = $("#peerRecipientSelect");
+  if (select) {
+    const currentUserId = currentUser?.id || "guest";
+    const otherMembers = (activeCoopRoom.members || []).filter((m) => m.userId !== currentUserId);
+    if (otherMembers.length === 0) {
+      select.innerHTML = '<option value="">No hay otros compañeros en la sala aún</option>';
+    } else {
+      select.innerHTML = otherMembers.map((m) => `<option value="${m.userId}">${m.name} (${m.role})</option>`).join("");
+    }
+  }
+
+  const rawInput = $("#peerRawInput");
+  if (rawInput) rawInput.value = "";
+
+  const resultBox = $("#peerSanitizedResult");
+  if (resultBox) resultBox.style.display = "none";
+
+  const modal = $("#peerReviewModal");
+  if (modal) modal.hidden = false;
+}
+
+async function sendPeerFeedback() {
+  if (!activeCoopRoom?.id) return;
+  const recipientUserId = $("#peerRecipientSelect")?.value;
+  if (!recipientUserId) {
+    toast("Selecciona a un compañero para enviar feedback.");
+    return;
+  }
+
+  const rawFeedback = ($("#peerRawInput")?.value || "").trim();
+  if (!rawFeedback) {
+    toast("Escribe tu nota o feedback para el compañero.");
+    return;
+  }
+
+  const score = parseInt($("#peerScoreSelect")?.value || "4", 10);
+  const sendBtn = $("#peerSendBtn");
+  if (sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Filtrando con Seguridad Psicológica...";
+  }
+
+  try {
+    const res = await post("/api/coop/peer-feedback", {
+      roomId: activeCoopRoom.id,
+      recipientUserId,
+      score,
+      rawFeedback,
+    });
+
+    const resultBox = $("#peerSanitizedResult");
+    const resultText = $("#peerSanitizedText");
+    if (resultBox && resultText) {
+      resultText.textContent = res.sanitizedFeedback;
+      resultBox.style.display = "block";
+    }
+
+    toast("✨ Feedback sanitizado y enviado con éxito.");
+  } catch (err) {
+    toast("Error al enviar peer feedback: " + err.message);
+  } finally {
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "🛡️ Enviar con Filtro Psicológico";
+    }
+  }
+}
+
+async function leaveCoopRoomAction() {
+  if (!activeCoopRoom?.id) return;
+  try {
+    await post("/api/coop/leave", { roomId: activeCoopRoom.id });
+  } catch {
+    // Ignorar si ya salió
+  }
+
+  if (coopTimerInterval) clearInterval(coopTimerInterval);
+  if (coopSilenceCheckInterval) clearInterval(coopSilenceCheckInterval);
+  activeCoopRoom = null;
+  toast("Has salido de la sala Co-Op.");
+  loadAndRenderCoop();
 }
 
 async function init() {
@@ -2677,6 +3098,37 @@ async function init() {
   $("#phaseANextBtn")?.addEventListener("click", () => onPhaseANext());
   $("#phaseBSubmitBtn")?.addEventListener("click", () => submitProfPhaseB());
   $("#phaseCNextTurnBtn")?.addEventListener("click", () => onPhaseCNextTurn());
+
+  // Eventos de Salas Co-Op y Mapa de Formantes (Fase II)
+  $("#hubEnterCoopBtn")?.addEventListener("click", () => switchTab("coop"));
+
+  document.querySelectorAll("#hubCoopDomainChips button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#hubCoopDomainChips button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const domain = btn.dataset.domain;
+      const select = $("#coopDomainSelect");
+      if (select && domain) select.value = domain;
+      switchTab("coop");
+    });
+  });
+
+  $("#coopFindRoomBtn")?.addEventListener("click", () => joinOrMatchCoopRoom());
+  $("#coopLeaveRoomBtn")?.addEventListener("click", () => leaveCoopRoomAction());
+  $("#coopSimulateTurnBtn")?.addEventListener("click", () => takeCoopTurn());
+  $("#coopOpenPeerReviewBtn")?.addEventListener("click", () => openPeerReviewModal());
+  $("#closePeerReviewModal")?.addEventListener("click", () => {
+    if ($("#peerReviewModal")) $("#peerReviewModal").hidden = true;
+  });
+  $("#peerSendBtn")?.addEventListener("click", () => sendPeerFeedback());
+
+  $("#coopOpenFormantBtn")?.addEventListener("click", () => openFormantMap());
+  $("#closeFormantMapModal")?.addEventListener("click", () => {
+    if ($("#formantMapModal")) $("#formantMapModal").hidden = true;
+  });
+  $("#formantUnderstoodBtn")?.addEventListener("click", () => {
+    if ($("#formantMapModal")) $("#formantMapModal").hidden = true;
+  });
 
   window.speechSynthesis?.getVoices();
 

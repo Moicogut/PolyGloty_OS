@@ -9,6 +9,7 @@ import {
   checkCoopSilence,
   leaveCoopRoom,
   getTbltMission,
+  recordPeerFeedback,
   coopMemoryStore,
 } from "../lib/coopEngine.js";
 import {
@@ -19,9 +20,14 @@ import {
   CANONICAL_FORMANTS,
 } from "../lib/acousticGopEngine.js";
 import {
+  buildCoopFacilitatorSystemInstruction,
+  filterAndSanitizePeerFeedback,
+} from "../lib/pedagogicalAgent.js";
+import {
   validateCoopMatchPayload,
   validateCoopTurnPayload,
   validateAcousticGopPayload,
+  validatePeerFeedbackPayload,
   ValidationError,
 } from "../lib/validator.js";
 
@@ -371,4 +377,165 @@ test("Integración Endpoints HTTP: POST /api/coop/match y POST /api/acoustic/gop
   assert.equal(gopRes.status, 200);
   assert.equal(gopRes.data.painType, "s_cluster_epenthesis");
   assert.equal(gopRes.data.gopScore, 42);
+
+  // 5. Unir al segundo miembro a la sala para habilitar peer review
+  matchOrCreateRoom({
+    userId: "usr-tech-2",
+    candidateName: "Tech Dos",
+    level: "A2",
+    domain: "tech",
+    maxCapacity: 4,
+  });
+
+  const peerRes = await invokeServer("POST", "/api/coop/peer-feedback", {
+    roomId: matchRes.data.room.id,
+    recipientUserId: "usr-tech-2",
+    score: 4,
+    rawFeedback: "Hablas muy mal y no se te entiende nada.",
+  });
+
+  assert.equal(peerRes.status, 200);
+  assert.ok(peerRes.data.sanitizedFeedback);
+  // Verificar que el filtro psicológico neutralizó los términos punitivos
+  assert.equal(peerRes.data.sanitizedFeedback.includes("muy mal"), false);
+  assert.equal(peerRes.data.sanitizedFeedback.includes("no se te entiende"), false);
+  assert.equal(peerRes.data.recipientFeedbackScore, 4);
+
+  // 6. Probar GET /api/coop/facilitator-prompt
+  const promptRes = await invokeServer("GET", `/api/coop/facilitator-prompt?roomId=${matchRes.data.room.id}`, null);
+  assert.equal(promptRes.status, 200);
+  assert.ok(promptRes.data.prompt.includes("WETTY, FACILITADORA"));
+  assert.ok(promptRes.data.suggestedSpeaker);
 });
+
+test("Facilitación Wetty Co-Op TBLT: buildCoopFacilitatorSystemInstruction genera instrucciones contextuales y moderación dinámica", () => {
+  resetRooms();
+  const r = matchOrCreateRoom({
+    userId: "host-1",
+    candidateName: "Ana Lead",
+    level: "B1",
+    domain: "corporate",
+    maxCapacity: 4,
+  });
+
+  // 1. Instrucción base con moderación de turnos
+  const instructionBase = buildCoopFacilitatorSystemInstruction({
+    room: r.room,
+    suggestedSpeaker: { userId: "host-1", name: "Ana Lead" },
+  });
+
+  assert.ok(instructionBase.includes("Ana Lead"));
+  assert.ok(instructionBase.includes("CORPORATE"));
+  assert.ok(instructionBase.includes("B1"));
+  assert.ok(instructionBase.includes("TBLT"));
+
+  // 2. Estímulo específico para miembro silencioso (< 50% de la media)
+  const instructionSilent = buildCoopFacilitatorSystemInstruction({
+    room: r.room,
+    suggestedSpeaker: { userId: "silent-user", name: "Luis Tímido" },
+    silentMember: { userId: "silent-user", name: "Luis Tímido" },
+  });
+
+  assert.ok(instructionSilent.includes("INTERVENCIÓN ANTE SILENCIO"));
+  assert.ok(instructionSilent.includes("Luis Tímido"));
+
+  // 3. Recasting fonético empático ante dolor GOP
+  const instructionPhonetic = buildCoopFacilitatorSystemInstruction({
+    room: r.room,
+    suggestedSpeaker: { userId: "host-1", name: "Ana Lead" },
+    phoneticPain: {
+      painType: "lax_tense_collapse",
+      targetPhoneme: "ɪ",
+      observedPhoneme: "iː",
+      word: "ship",
+    },
+  });
+
+  assert.ok(instructionPhonetic.includes("RECASTING FONÉTICO EMPÁTICO"));
+  assert.ok(instructionPhonetic.includes("lax_tense_collapse"));
+  assert.ok(instructionPhonetic.includes("ship"));
+});
+
+test("Filtro de Seguridad Psicológica: filterAndSanitizePeerFeedback neutraliza críticas punitivas y produce Praise Sandwich", async () => {
+  // Test 1: Mensaje punitivo agresivo en español
+  const hostile = "Tu pronunciación es pésima, hablas muy mal y no te entendí nada. Muy lento.";
+  const sanitized1 = await filterAndSanitizePeerFeedback(hostile, {
+    authorName: "Pedro",
+    recipientName: "María",
+  });
+
+  assert.equal(sanitized1.sanitizedText.includes("pésima"), false);
+  assert.equal(sanitized1.sanitizedText.includes("muy mal"), false);
+  assert.equal(sanitized1.sanitizedText.includes("no te entendí"), false);
+  // Estructura de sándwich positivo
+  assert.ok(sanitized1.sanitizedText.includes("María"));
+  assert.equal(sanitized1.sentiment, "constructive_neutralized");
+
+  // Test 2: Mensaje ya constructivo se preserva con encuadre positivo
+  const positive = "Me gustó cómo explicaste los requerimientos, excelente vocabulario.";
+  const sanitized2 = await filterAndSanitizePeerFeedback(positive, {
+    authorName: "Carlos",
+    recipientName: "Laura",
+  });
+
+  assert.ok(sanitized2.sanitizedText.includes("Me gustó cómo explicaste"));
+  assert.ok(sanitized2.sanitizedText.includes("Laura"));
+  assert.equal(sanitized2.sentiment, "motivating_supportive");
+});
+
+test("Motor Co-Op: recordPeerFeedback actualiza métricas y registra evaluación entre compañeros", () => {
+  resetRooms();
+  const user1 = matchOrCreateRoom({ userId: "dev-a", candidateName: "Dev A", level: "A2", domain: "tech" });
+  matchOrCreateRoom({ userId: "dev-b", candidateName: "Dev B", level: "A2", domain: "tech" });
+
+  const roomId = user1.room.id;
+
+  const result = recordPeerFeedback({
+    roomId,
+    authorUserId: "dev-a",
+    recipientUserId: "dev-b",
+    score: 5,
+    sanitizedFeedback: "Dev B aportó ideas muy claras durante la reunión de sprint.",
+  });
+
+  assert.equal(result.recipientFeedbackScore, 5);
+  assert.equal(result.reviewRecord.authorUserId, "dev-a");
+  assert.equal(result.reviewRecord.score, 5);
+  assert.equal(result.room.members.find((m) => m.userId === "dev-b").peerFeedbackScore, 5);
+});
+
+test("Validadores Defensivos: validatePeerFeedbackPayload valida datos y rango de score (1-5)", () => {
+  // Payload válido
+  const valid = validatePeerFeedbackPayload({
+    roomId: "room-abc-123",
+    recipientUserId: "user-456",
+    score: 4,
+    rawFeedback: "  Buen trabajo colaborativo.  ",
+  });
+
+  assert.equal(valid.roomId, "room-abc-123");
+  assert.equal(valid.recipientUserId, "user-456");
+  assert.equal(valid.score, 4);
+  assert.equal(valid.rawFeedback, "Buen trabajo colaborativo.");
+
+  // Rechaza score inválido (< 1 o > 5)
+  assert.throws(() => {
+    validatePeerFeedbackPayload({
+      roomId: "room-1",
+      recipientUserId: "user-1",
+      score: 99,
+      rawFeedback: "ok",
+    });
+  }, ValidationError);
+
+  // Rechaza feedback vacío
+  assert.throws(() => {
+    validatePeerFeedbackPayload({
+      roomId: "room-1",
+      recipientUserId: "user-1",
+      score: 3,
+      rawFeedback: "   ",
+    });
+  }, ValidationError);
+});
+

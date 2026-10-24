@@ -276,6 +276,28 @@
         </div>
       </div>
     </div>
+
+    <!-- Sección de Salas Co-Op y Aprendizaje Colaborativo (Fase II) -->
+    <div class="hub-coop-section" style="margin-top: 20px;">
+      <div class="hub-coop-banner" id="hubCoopBanner">
+        <div class="coop-badge-pill">👥 SOCIAL CO-OP · TBLT METHODOLOGY</div>
+        <h3 style="margin: 4px 0; font-size: 18px;">Salas de Conversación en Microgrupos (2 a 6)</h3>
+        <p class="muted small" style="margin: 0 0 10px 0;">
+          Practica con compañeros de tu mismo nivel CEFR y dominio profesional. Wetty facilita la conversación equilibrando los turnos y guiando la articulación fonética.
+        </p>
+        <div class="coop-domain-chips" id="hubCoopDomainChips">
+          <button type="button" class="coop-domain-btn active" data-domain="tech">💻 Tecnología</button>
+          <button type="button" class="coop-domain-btn" data-domain="medical">🩺 Médico</button>
+          <button type="button" class="coop-domain-btn" data-domain="corporate">🏢 Corporativo</button>
+          <button type="button" class="coop-domain-btn" data-domain="general">🌍 General</button>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 8px;">
+          <button id="hubEnterCoopBtn" type="button" class="primary" style="padding: 10px 20px; font-weight: 700; border-radius: var(--radius-full);">
+            <span>👥 Entrar a Sala Co-Op →</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- TAB 1: HABLAR (ESTILO PRAKTIKA CON TUTOR AVATAR) -->
@@ -511,6 +533,129 @@
 
     <h2 style="margin-top: 24px;">Medallas e Insignias obtenidas</h2>
     <div id="badges" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+  </section>
+
+  <!-- TAB 5: SALAS CO-OP DE MICROGRUPOS (FASE II) -->
+  <section id="coop" class="panel panel-coop" hidden>
+    <!-- 1. Vista de Búsqueda / Matchmaking -->
+    <div id="coopMatchView" class="coop-room-card">
+      <div class="coop-header-row">
+        <div>
+          <span class="coop-badge-pill">👥 Co-Op Smart Match</span>
+          <h2 style="margin: 6px 0 0; font-size: 20px;">Salas de Microgrupos TBLT</h2>
+          <p class="muted small" style="margin: 4px 0 0;">Práctica situada con tareas colaborativas guiadas por Wetty</p>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+        <label>Tu Nombre o Alias en la Sala
+          <input id="coopCandidateName" type="text" placeholder="Ej: Carlos Dev" value="">
+        </label>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <label>Nivel de Referencia
+            <select id="coopLevelSelect">
+              <option value="A1">A1 · Breakthrough</option>
+              <option value="A2" selected>A2 · Waystage</option>
+              <option value="B1">B1 · Threshold</option>
+              <option value="B2">B2 · Vantage</option>
+              <option value="C1">C1 · Effective Operational</option>
+            </select>
+          </label>
+          <label>Dominio Profesional
+            <select id="coopDomainSelect">
+              <option value="tech" selected>💻 Tecnología (Tech)</option>
+              <option value="medical">🩺 Médico & Salud</option>
+              <option value="corporate">🏢 Negocios & Finanzas</option>
+              <option value="general">🌍 General & Cotidiano</option>
+            </select>
+          </label>
+        </div>
+
+        <label>Capacidad Máxima de la Sala
+          <select id="coopCapacitySelect">
+            <option value="2">2 participantes (Dúo enfocado)</option>
+            <option value="3">3 participantes (Tríada interactiva)</option>
+            <option value="4" selected>4 participantes (Reunión estándar)</option>
+            <option value="6">6 participantes (Mesa redonda)</option>
+          </select>
+        </label>
+
+        <button id="coopFindRoomBtn" type="button" class="primary" style="padding: 14px; font-weight: 700; border-radius: var(--radius-full); margin-top: 6px;">
+          <span>🔍 Buscar o Crear Sala Co-Op</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Vista de Sala Activa -->
+    <div id="coopActiveRoomView" class="coop-room-card" hidden>
+      <div class="coop-header-row">
+        <div class="coop-code-display">
+          <span>Sala:</span>
+          <span class="coop-code-tag" id="coopRoomCode">#COOP-000</span>
+          <span class="coop-badge-pill" id="coopRoomDomainBadge">TECH · A2</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span id="coopTimerBadge" style="font-weight: 700; color: var(--accent-light); font-size: 14px;">⏱️ 15:00</span>
+          <button id="coopLeaveRoomBtn" type="button" class="dock-pill-btn small" title="Abandonar la sala actual">
+            <span>🚪 Salir</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Banner de Facilitación de Wetty IA -->
+      <div class="coop-facilitator-banner">
+        <img src="/wetty.jpg" alt="Wetty Facilitadora" class="coop-wetty-avatar">
+        <div style="flex: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <b style="font-size: 13px; color: var(--accent-light);">Wetty · Facilitadora Co-Op TBLT</b>
+            <span id="coopWettyStatus" class="muted small">Moderando dinámica</span>
+          </div>
+          <div id="coopFacilitatorPrompt" class="coop-facilitator-text" style="margin-top: 4px;">
+            "¡Bienvenidos a la sesión! Recuerden que el objetivo es resolver el reto juntos comunicándose en inglés. Todos deben participar activamente."
+          </div>
+        </div>
+      </div>
+
+      <!-- Misión TBLT Asignada -->
+      <div class="coop-task-box">
+        <div class="coop-task-title">
+          <span>🎯</span> <span id="coopTaskTitle">Standup Técnico y Bloqueos de Despliegue</span>
+        </div>
+        <p id="coopTaskScenario" class="muted small" style="margin: 0; line-height: 1.4;">
+          El equipo está coordinando un despliegue crítico de sprint. Cada miembro reporta su avance y bloqueos técnicos.
+        </p>
+        <ul id="coopTaskSteps" class="coop-task-steps">
+          <li>Paso 1: Cada participante describe su tarea asignada.</li>
+          <li>Paso 2: Negociar soluciones a los impedimentos técnicos.</li>
+          <li>Paso 3: Llegar a un acuerdo consensuado antes del cierre.</li>
+        </ul>
+      </div>
+
+      <!-- Roster de Miembros y Balance de Talking Time -->
+      <div class="coop-roster-title">Participantes & Balance de Voz</div>
+      <div class="coop-members-grid" id="coopMembersGrid">
+        <!-- Renderizado dinámico -->
+      </div>
+
+      <!-- Barra de Acciones del Participante -->
+      <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button id="coopSimulateTurnBtn" type="button" class="primary" style="flex: 2; padding: 12px; font-weight: 700; border-radius: var(--radius-full);">
+            <span>🎙️ Tomar Turno de Voz</span>
+          </button>
+          <button id="coopOpenPeerReviewBtn" type="button" class="dock-pill-btn" style="flex: 1; padding: 12px; justify-content: center;">
+            <span>💬 Peer Review</span>
+          </button>
+          <button id="coopOpenFormantBtn" type="button" class="dock-pill-btn" style="flex: 1; padding: 12px; justify-content: center;">
+            <span>📐 Mapa F1/F2</span>
+          </button>
+        </div>
+        <div id="coopTurnAlert" class="muted small" style="text-align: center;">
+          Habla con naturalidad. Wetty detectará automáticamente tu participación y formantes acústicos.
+        </div>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -1023,6 +1168,153 @@
 </div>
 
 
+<!-- MODAL DE MAPA DE FORMANTES F1/F2 (MOTOR GOP) -->
+<div id="formantMapModal" class="modal-overlay" hidden>
+  <div class="modal-card formant-map-card">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 24px;">📐</span>
+        <div>
+          <h3 style="margin: 0; font-size: 18px;">Mapa Articulatorio de Formantes (F1 / F2)</h3>
+          <p class="muted small" style="margin: 0;">Análisis acústico en tiempo real (Goodness of Pronunciation)</p>
+        </div>
+      </div>
+      <button id="closeFormantMapModal" type="button" class="modal-close">&times;</button>
+    </div>
+
+    <div class="formant-trapezoid-wrap">
+      <svg class="formant-svg-canvas" viewBox="0 0 400 300" id="formantSvg">
+        <!-- Rejilla y contorno del trapecio vocálico estándar IPA -->
+        <polygon points="40,30 360,30 290,260 110,260" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="4"/>
+        <line x1="40" y1="145" x2="325" y2="145" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+        <line x1="200" y1="30" x2="200" y2="260" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+        
+        <!-- Etiquetas anatómicas -->
+        <text x="50" y="22" class="formant-axis-lbl">← ANTERIOR (F2 alto)</text>
+        <text x="270" y="22" class="formant-axis-lbl">POSTERIOR (F2 bajo) →</text>
+        <text x="10" y="45" class="formant-axis-lbl" transform="rotate(-90 15,45)">CERRADA (F1 bajo)</text>
+        <text x="10" y="245" class="formant-axis-lbl" transform="rotate(-90 15,245)">ABIERTA (F1 alto)</text>
+        
+        <!-- Puntos canónicos de referencia estáticos -->
+        <circle cx="65" cy="45" r="4" fill="rgba(255,255,255,0.3)"/>
+        <text x="75" y="48" fill="rgba(255,255,255,0.5)" font-size="10">/iː/</text>
+
+        <circle cx="110" cy="85" r="4" fill="rgba(255,255,255,0.3)"/>
+        <text x="120" y="88" fill="rgba(255,255,255,0.5)" font-size="10">/ɪ/</text>
+
+        <circle cx="200" cy="130" r="4" fill="rgba(255,255,255,0.3)"/>
+        <text x="210" y="133" fill="rgba(255,255,255,0.5)" font-size="10">/ə/</text>
+
+        <circle cx="330" cy="45" r="4" fill="rgba(255,255,255,0.3)"/>
+        <text x="340" y="48" fill="rgba(255,255,255,0.5)" font-size="10">/uː/</text>
+
+        <circle cx="280" cy="245" r="4" fill="rgba(255,255,255,0.3)"/>
+        <text x="290" y="248" fill="rgba(255,255,255,0.5)" font-size="10">/ɑː/</text>
+
+        <circle cx="130" cy="235" r="4" fill="rgba(255,255,255,0.3)"/>
+        <text x="140" y="238" fill="rgba(255,255,255,0.5)" font-size="10">/æ/</text>
+
+        <!-- Vector dinámico: del observado al objetivo -->
+        <line id="formantVectorLine" x1="65" y1="45" x2="110" y2="85" stroke="#ef4444" stroke-width="2" stroke-dasharray="3"/>
+
+        <!-- Punto Fonema Objetivo (Verde) -->
+        <circle id="formantTargetDot" cx="110" cy="85" r="9" class="formant-dot-target"/>
+        <text id="formantTargetLbl" x="110" y="105" text-anchor="middle" fill="#10b981" font-weight="700" font-size="11">/ɪ/ Objetivo</text>
+
+        <!-- Punto Fonema Observado (Rojo) -->
+        <circle id="formantObservedDot" cx="65" cy="45" r="9" class="formant-dot-observed"/>
+        <text id="formantObservedLbl" x="65" y="32" text-anchor="middle" fill="#ef4444" font-weight="700" font-size="11">/iː/ Pronunciado</text>
+      </svg>
+    </div>
+
+    <!-- Leyenda de colores -->
+    <div class="formant-legend-row">
+      <div class="formant-legend-item">
+        <span class="formant-legend-color" style="background: #10b981;"></span>
+        <span>Posición Canónica Nativa</span>
+      </div>
+      <div class="formant-legend-item">
+        <span class="formant-legend-color" style="background: #ef4444;"></span>
+        <span>Tu Articulación Detectada</span>
+      </div>
+    </div>
+
+    <!-- Guía Biomecánica Anatómica -->
+    <div class="formant-guide-grid">
+      <div class="formant-bio-card">
+        <div class="formant-bio-title">Mandíbula (F1)</div>
+        <div class="formant-bio-val" id="formantBioJaw">Relajada semi-cerrada (~12mm)</div>
+      </div>
+      <div class="formant-bio-card">
+        <div class="formant-bio-title">Cuerpo Lingual (F2)</div>
+        <div class="formant-bio-val" id="formantBioTongue">Posición anterior descentrada</div>
+      </div>
+    </div>
+
+    <!-- Recasting y Consejo Práctico de Wetty -->
+    <div class="formant-recasting-box" id="formantRecastingBox">
+      <b>💡 Recasting de Wetty:</b>
+      <p id="formantRecastingText" style="margin: 4px 0 0;">
+        "Recuerda: para la vocal de <i>'ship'</i> no tenses los labios ni sonrías como en <i>'sheep'</i>. Deja caer la mandíbula un milímetro y haz un sonido corto y suave."
+      </p>
+    </div>
+
+    <div style="margin-top: 18px;">
+      <button id="formantUnderstoodBtn" type="button" class="primary" style="width: 100%; padding: 12px; font-weight: 700; border-radius: var(--radius-full);">
+        <span>✅ Entendido, volver a la sala</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE PEER REVIEW CON FILTRO DE SEGURIDAD PSICOLÓGICA -->
+<div id="peerReviewModal" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 24px;">🛡️</span>
+        <div>
+          <h3 style="margin: 0; font-size: 18px;">Peer Review Psicológicamente Seguro</h3>
+          <p class="muted small" style="margin: 0;">Wetty reformula tus notas para crear un entorno de alta confianza</p>
+        </div>
+      </div>
+      <button id="closePeerReviewModal" type="button" class="modal-close">&times;</button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+      <label>Compañero Destinatario
+        <select id="peerRecipientSelect">
+          <option value="">Selecciona un compañero...</option>
+        </select>
+      </label>
+
+      <label>Calificación de Aporte (1 a 5)
+        <select id="peerScoreSelect">
+          <option value="5">⭐⭐⭐⭐⭐ Excelente contribución</option>
+          <option value="4" selected>⭐⭐⭐⭐ Muy buen aporte</option>
+          <option value="3">⭐⭐⭐ Aporte constructivo</option>
+          <option value="2">⭐⭐ En progreso</option>
+          <option value="1">⭐ Necesita apoyo del equipo</option>
+        </select>
+      </label>
+
+      <label>Tus Notas o Feedback
+        <textarea id="peerRawInput" rows="3" placeholder="Escribe lo que notaste de su pronunciación, fluidez o respuesta..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px; color: var(--text-main); font-family: inherit; font-size: 13px;"></textarea>
+      </label>
+
+      <!-- Caja de Resultado Reformulado (Praise Sandwich) -->
+      <div id="peerSanitizedResult" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: 12px; display: none;">
+        <b style="font-size: 12px; color: #10b981; display: block; margin-bottom: 4px;">✨ Mensaje Optimizado por Wetty (Praise Sandwich):</b>
+        <div id="peerSanitizedText" style="font-size: 13px; line-height: 1.45; color: var(--text-main);"></div>
+      </div>
+
+      <button id="peerSendBtn" type="button" class="primary" style="padding: 12px; font-weight: 700; border-radius: var(--radius-full); margin-top: 6px;">
+        <span>🛡️ Enviar con Filtro Psicológico</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <!-- BARRA DE NAVEGACIÓN INFERIOR (Estilo App Nativa Praktika) -->
@@ -1034,6 +1326,10 @@
   <button role="tab" data-tab="speak" aria-selected="false" class="bottom-nav-item" id="tabNavSpeak">
     <span class="nav-icon">🎙️</span>
     <span class="nav-label">Tutor</span>
+  </button>
+  <button role="tab" data-tab="coop" aria-selected="false" class="bottom-nav-item" id="tabNavCoop">
+    <span class="nav-icon">👥</span>
+    <span class="nav-label">Co-Op</span>
   </button>
   <button role="tab" data-tab="tones" aria-selected="false" class="bottom-nav-item">
     <span class="nav-icon">🎵</span>
