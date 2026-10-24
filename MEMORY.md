@@ -446,6 +446,12 @@ Se implementó la arquitectura curricular formal y el libro oficial canónico de
   - Verificación del árbol curricular y modal del Handbook grabada en video: `fase2_handbook_modal_verified_1792859020845.webp`.
   - Capturas registradas: `curriculum_tree_verified_1792859068872.png`, `hub_overview_1792859107015.png`, `warmup_completed_1792859725105.png`.
 
-
-
-
+### 20.6 Despliegue en Producción (Render)
+- **Commits Desplegados a `origin main`**:
+  - `ab7c099`: `feat(fase-1): landing page, auth wall, student hub y pre-sesion warmup`
+  - `300d3f2`: `feat(fase-2): estructura curricular modular por creditos y polyglot curriculum handbook`
+- **Verificación en Producción (`polyglot-voice-jtu6.onrender.com`)**:
+  - Health check en vivo: `GET /health` responde 200 OK (`status: ok`, `service: polyglot-voice`).
+  - Endpoint de árbol curricular: `GET /api/curriculum/tree?lang=en&level=A1` responde 200 OK con los 3 módulos temáticos y 36 créditos meta.
+  - Endpoint de Handbook: `GET /api/curriculum/handbook?lang=en&level=A1&lessonId=cafe` responde 200 OK con las 5 dimensiones pedagógicas y código canónico `EN-A1-M1-L1`.
+  - Frontend actualizado: `index.html` sirviendo `/app.js?v=2.8` con el Handbook modal y el Warm-up Booster integrados.
