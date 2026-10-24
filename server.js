@@ -13,7 +13,8 @@ import {
   buildPedagogicalSystemInstruction,
   adaptMissionForLevel,
   GEMINI_PEDAGOGICAL_SCHEMA,
-  repairAndGuaranteePedagogicalResponse
+  repairAndGuaranteePedagogicalResponse,
+  MISSION_CATALOG,
 } from "./lib/pedagogicalAgent.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -102,6 +103,7 @@ const routes = {
     send(res, 200, {
       ...snapshot(state, lang(url.searchParams.get("lang"))),
       missions: MISSIONS,
+      missionsCatalog: MISSION_CATALOG,
       langs: LANGS,
       model: PROVIDER === "gemini" ? GEMINI_MODEL : MODEL,
       provider: PROVIDER,
@@ -259,6 +261,8 @@ const routes = {
         systemInstruction,
         lang: langCode,
         level: levelCode,
+        mission: adapted,
+        opening: adapted.opening,
       });
     }
 
@@ -378,7 +382,7 @@ const routes = {
             contents: geminiContents,
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 900,
+              maxOutputTokens: 2500,
               responseMimeType: "application/json",
               responseSchema: GEMINI_PEDAGOGICAL_SCHEMA,
             },
@@ -403,8 +407,10 @@ const routes = {
           }
 
           const data = await response.json();
-          if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-            rawText = data.candidates[0].content.parts[0].text;
+          const parts = data.candidates?.[0]?.content?.parts || [];
+          const textPart = parts.find((p) => p.text && (p.text.includes('"reply"') || !p.thought)) || parts[0];
+          if (response.ok && textPart?.text) {
+            rawText = textPart.text;
             break;
           }
           lastError = data.error?.message || `Status ${response.status}`;
@@ -482,8 +488,11 @@ const routes = {
         translation: guaranteed.translation,
         facilitator: guaranteed.facilitator,
         vocabulary: guaranteed.vocabulary,
+        completedObjectives: guaranteed.completedObjectives || [],
         feedback: { tip: guaranteed.facilitator.userAnalysis },
         competencies: state.data.competencies,
+        sessionVocab: state.data.sessionVocab || [],
+        sessionVocabCount: state.data.sessionVocab?.length || 0,
         xp,
         latency: {
           modelMs,

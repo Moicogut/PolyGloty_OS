@@ -105,3 +105,62 @@ test("Escenario E2E de capturas de usuario: A1 en reunión con cliente + 'Yes, I
   assert.ok(guaranteed.facilitator.encouragement.includes("!"), "Debe tener mensaje motivador");
   assert.ok(guaranteed.facilitator.repetitionPrompt.includes("Yes, I am ready"), "Debe invitar a repetir en voz alta");
 });
+
+test("MISSION_CATALOG contiene las 7 misiones con aperturas y objetivos por nivel", async () => {
+  const { MISSION_CATALOG } = await import("../lib/pedagogicalAgent.js");
+  const expectedMissions = ["cafe", "cliente", "hotel", "aeropuerto", "entrevista", "taxi", "libre"];
+  for (const mId of expectedMissions) {
+    assert.ok(MISSION_CATALOG[mId], `Misión ${mId} debe existir en el catálogo`);
+    assert.ok(MISSION_CATALOG[mId].A1, `Misión ${mId} debe tener nivel A1`);
+    assert.ok(MISSION_CATALOG[mId].A1.objectives.length >= 3, `Misión ${mId} en A1 debe tener al menos 3 objetivos`);
+    assert.ok(MISSION_CATALOG[mId].A1.opening.greeting, `Misión ${mId} en A1 debe tener saludo de apertura`);
+    assert.ok(MISSION_CATALOG[mId].A1.opening.translation, `Misión ${mId} en A1 debe tener traducción de apertura`);
+  }
+});
+
+test("Traducciones de subtítulos NUNCA tienen prefijo técnico (ES)", () => {
+  const bugCase = {
+    reply: "Hello! Do you want coffee or tea?",
+    translation: "(ES) Hello! Do you want coffee or tea?",
+  };
+  const res = repairAndGuaranteePedagogicalResponse(bugCase, "", "Hello", "A1", "en");
+  assert.ok(!res.translation.startsWith("(ES)"), "No debe tener prefijo (ES)");
+  assert.match(res.translation, /café o té/i);
+});
+
+test("Diagnóstico contrastivo para error fonético/léxico: convention -> conversation", () => {
+  const res = repairAndGuaranteePedagogicalResponse({}, "", "I am ready for you convention", "A1", "en");
+  assert.ok(res.facilitator);
+  assert.match(res.facilitator.userAnalysis, /convention/i);
+  assert.equal(res.facilitator.correctForm, "I am ready for our conversation.");
+  assert.equal(res.facilitator.nativeAlternative, "I'm all set to practice!");
+});
+
+test("Diagnóstico contrastivo para pedido en cafetería: 'i want a coffee'", () => {
+  const res = repairAndGuaranteePedagogicalResponse({}, "", "i want a coffee", "A1", "en");
+  assert.ok(res.facilitator);
+  assert.match(res.facilitator.userAnalysis, /cortante|educado|would like/i);
+  assert.equal(res.facilitator.correctForm, "I would like a coffee, please.");
+  assert.equal(res.facilitator.nativeAlternative, "Can I get a coffee, please?");
+});
+
+test("repairAndGuaranteePedagogicalResponse extrae vocabulario si el modelo lo omite", () => {
+  const noVocab = {
+    reply: "Welcome to the hotel! Do you have a reservation?",
+    translation: "¡Bienvenido al hotel! ¿Tiene una reserva?",
+    vocabulary: [],
+  };
+  const res = repairAndGuaranteePedagogicalResponse(noVocab, "", "Hello", "A1", "en");
+  assert.ok(Array.isArray(res.vocabulary) && res.vocabulary.length > 0);
+  assert.ok(res.vocabulary.some(v => v.word === "hotel" || v.word === "reservation"));
+});
+
+test("repairAndGuaranteePedagogicalResponse preserva completedObjectives", () => {
+  const withObjectives = {
+    reply: "Great choice! Here is your coffee.",
+    translation: "¡Gran elección! Aquí tiene su café.",
+    completedObjectives: [0, 1],
+  };
+  const res = repairAndGuaranteePedagogicalResponse(withObjectives, "", "I want a coffee, please", "A1", "en");
+  assert.deepEqual(res.completedObjectives, [0, 1]);
+});

@@ -136,25 +136,16 @@ function getAdaptedMission() {
   const m = mission();
   if (!m) return null;
   const lv = $("#level")?.value || "A1";
-  if (m.id === "cliente") {
-    if (lv === "A1" || lv === "HSK1") {
+  const catalog = S?.missionsCatalog?.[m.id];
+  if (catalog) {
+    const isZh = lang() === "zh";
+    const levelData = catalog[lv] || (isZh ? catalog.HSK1 : catalog.A1) || catalog[Object.keys(catalog)[0]];
+    if (levelData) {
       return {
         ...m,
-        objectives: [
-          "Saludar y dar la bienvenida al cliente",
-          "Confirmar el nombre del cliente",
-          "Ofrecer una bebida (agua o café)",
-        ],
-      };
-    }
-    if (lv === "A2" || lv === "HSK2") {
-      return {
-        ...m,
-        objectives: [
-          "Saludar y confirmar la hora de la reunión",
-          "Indicar la sala o lugar",
-          "Preguntar si necesita algo antes de comenzar",
-        ],
+        scene: levelData.scene,
+        objectives: levelData.objectives,
+        opening: levelData.opening,
       };
     }
   }
@@ -192,7 +183,7 @@ function renderObjectives() {
   $("#objs").replaceChildren(...(m ? m.objectives : []).map((o, i) => el("li", done.has(i) ? "done" : "", `${done.has(i) ? "✓" : "○"} ${o}`)));
 }
 
-function renderFacilitatorCard(fac) {
+function renderFacilitatorCard(fac, turnVocab = []) {
   if (!fac || !fac.userAnalysis) return null;
   const card = el("div", "facilitator-card");
 
@@ -224,7 +215,12 @@ function renderFacilitatorCard(fac) {
       const boxCorrect = el("div", "alt-box");
       const lbl = el("div", "alt-label correct", "✅ Forma Correcta");
       const txt = el("div", "alt-text", fac.correctForm);
-      boxCorrect.append(lbl, txt);
+      const actions = el("div", "alt-actions");
+      const listenBtn = el("button", "alt-listen-btn", "🔊 Escuchar");
+      listenBtn.type = "button";
+      listenBtn.onclick = () => speakVoice(fac.correctForm);
+      actions.append(listenBtn);
+      boxCorrect.append(lbl, txt, actions);
       altsGrid.append(boxCorrect);
     }
 
@@ -242,6 +238,26 @@ function renderFacilitatorCard(fac) {
     }
 
     card.append(altsGrid);
+  }
+
+  // Vocabulario clave extraído en este turno específico
+  if (Array.isArray(turnVocab) && turnVocab.length > 0) {
+    const vocabWrap = el("div", "facilitator-vocab-strip");
+    const vTitle = el("div", "vocab-strip-title", "🔑 Vocabulario clave del turno:");
+    const vChips = el("div", "vocab-strip-chips");
+    turnVocab.forEach((item) => {
+      const chip = el("div", "vocab-chip");
+      const wSpan = el("b", "chip-word", item.word);
+      const tSpan = el("span", "chip-trans", ` · ${item.translation}`);
+      const btn = el("button", "chip-audio-btn", "🔊");
+      btn.type = "button";
+      btn.title = "Escuchar";
+      btn.onclick = () => speakVoice(item.word);
+      chip.append(wSpan, tSpan, btn);
+      vChips.append(chip);
+    });
+    vocabWrap.append(vTitle, vChips);
+    card.append(vocabWrap);
   }
 
   // Repetición contextual para niveles iniciales
@@ -547,7 +563,14 @@ async function sendTurnToTutor(userText, sttDurationMs = 0) {
     });
 
     if (res.facilitator) {
-      renderFacilitatorCard(res.facilitator);
+      renderFacilitatorCard(res.facilitator, res.vocabulary);
+    }
+
+    // Actualización inmediata del vocabulario de la sesión
+    if (Array.isArray(res.sessionVocab)) {
+      if (!S) S = {};
+      S.sessionVocab = res.sessionVocab;
+      renderSessionVocab();
     }
 
     status("Conectado: responde por texto o voz");
@@ -563,8 +586,8 @@ async function sendTurnToTutor(userText, sttDurationMs = 0) {
       latEl.textContent = `${totalTurnMs} ms (modelo: ${modelLatencyMs}ms)`;
     }
 
-    // Revisar objetivos
-    checkMissionProgress(userText);
+    // Revisar objetivos pedagógicamente
+    checkMissionProgress(userText, res.completedObjectives);
     await refresh();
   } catch (err) {
     clearTimeout(slowTimer);
@@ -670,16 +693,37 @@ function speakVoice(text) {
   }
 }
 
-function checkMissionProgress(userText) {
-  const m = mission();
-  if (!m || !m.objectives.length) return;
-  m.objectives.forEach((obj, idx) => {
-    if (!done.has(idx) && userText.length > 5) {
-      if (Math.random() > 0.45) {
+function checkMissionProgress(userText, completedIndices = []) {
+  const m = getAdaptedMission();
+  if (!m || !m.objectives || !m.objectives.length) return;
+
+  // 1. Evaluación directa devuelta por el Agente Pedagógico (modelo)
+  if (Array.isArray(completedIndices) && completedIndices.length > 0) {
+    for (const idx of completedIndices) {
+      if (Number.isInteger(idx) && idx >= 0 && idx < m.objectives.length && !done.has(idx)) {
         done.add(idx);
         renderObjectives();
         post("/api/tool", { name: "mission_progress", args: { objective_index: idx }, lang: lang(), mission: m.id, done: [...done] }).then((r) => applyFx(r.fx)).catch(() => {});
       }
+    }
+  }
+
+  // 2. Coincidencias contextuales basadas en Can-Do descriptors
+  const lower = userText.toLowerCase();
+  m.objectives.forEach((obj, idx) => {
+    if (done.has(idx)) return;
+    const objLower = obj.toLowerCase();
+    const hasMatch = (
+      (objLower.includes("saludar") && (lower.includes("hello") || lower.includes("hi") || lower.includes("good") || lower.includes("你好"))) ||
+      (objLower.includes("pedir") && (lower.includes("want") || lower.includes("like") || lower.includes("have") || lower.includes("get") || lower.includes("coffee") || lower.includes("tea") || lower.includes("我要"))) ||
+      (objLower.includes("nombre") && (lower.includes("name") || lower.includes("i am") || lower.includes("i'm") || lower.includes("叫"))) ||
+      (objLower.includes("gracias") && (lower.includes("thank") || lower.includes("thanks") || lower.includes("please") || lower.includes("谢谢"))) ||
+      (objLower.includes("precio") && (lower.includes("much") || lower.includes("cost") || lower.includes("price") || lower.includes("多少钱")))
+    );
+    if (hasMatch) {
+      done.add(idx);
+      renderObjectives();
+      post("/api/tool", { name: "mission_progress", args: { objective_index: idx }, lang: lang(), mission: m.id, done: [...done] }).then((r) => applyFx(r.fx)).catch(() => {});
     }
   });
 }
@@ -711,14 +755,23 @@ async function connect() {
     if ($("#voiceBtn")) $("#voiceBtn").disabled = false;
     if ($("#tutorBadge")) $("#tutorBadge").textContent = "Conectado";
 
-    // Mensaje de apertura de la escena
-    const greeting = lang() === "zh"
-      ? "你好！很高兴见到你。今天你想练习什么？"
-      : "Hello! Nice to meet you. Are you ready for our conversation?";
+    // Mensaje de apertura adaptado a la misión y nivel
+    const adapted = getAdaptedMission();
+    let greeting = sess?.opening?.greeting || adapted?.opening?.greeting;
+    let greetingTrans = sess?.opening?.translation || adapted?.opening?.translation;
 
-    const greetingTrans = lang() === "zh"
-      ? "¡Hola! Mucho gusto en verte. ¿Qué te gustaría practicar hoy?"
-      : "¡Hola! Mucho gusto en conocerte. ¿Estás listo para nuestra conversación?";
+    if (!greeting) {
+      greeting = lang() === "zh"
+        ? "你好！很高兴见到你。你想喝咖啡还是茶？"
+        : "Hello! Welcome to our session. Are you ready to start?";
+      greetingTrans = lang() === "zh"
+        ? "¡Hola! Mucho gusto en verte. ¿Deseas café o té?"
+        : "¡Hola! Bienvenido a nuestra sesión. ¿Estás listo para comenzar?";
+    }
+
+    conversationHistory = [
+      { role: "model", parts: [{ text: greeting }] }
+    ];
 
     say("ai", greeting, { translation: greetingTrans });
     speakVoice(greeting);

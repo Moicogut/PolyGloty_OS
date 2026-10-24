@@ -277,7 +277,34 @@ En esta entrega se resolvió el desajuste pedagógico observado en producción (
   - Excluidos estrictamente de `generateContent`: modelos WebSocket (`live`) y modelos descontinuados (`1.5`, `2.0`).
 - **Verificación**: `scripts/smoke.js` ejecutado en vivo con resultado `VERIFICADO (Éxito)`.
 
+---
 
+## 16. Agente Pedagógico Integral por Competencias y Sistema Progresivo (Agent Loop)
 
+### 16.1 Problemas Diagnosticados en Interacción Real
+1. **Truncamiento de JSON por Presupuesto de Tokens Insuficiente**:
+   - `maxOutputTokens: 900` se agotaba debido a los tokens de razonamiento interno de Gemini 3.x (`thoughtsTokenCount` ~400+), cortando el JSON a la mitad (`"vocabulary": [ ...`). Esto provocaba fallas en `JSON.parse` y forzaba valores de respaldo vacíos o genéricos.
+2. **Subtítulos con Prefijo Técnico o Eco en Inglés**:
+   - Respuestas devueltas como `(ES) Hello! Do you want coffee or tea?` generaban confusión en el alumno.
+3. **Vocabulario Roto (`vocabCount: 0`)**:
+   - Al no completarse el JSON, `state.data.sessionVocab` no recibía términos y el cajón de vocabulario permanecía vacío.
+4. **Falta de Progresión y Textos Repetitivos**:
+   - Todas las misiones iniciaban con el saludo idéntico `"Hello! Nice to meet you. Are you ready for our conversation?"` y la evaluación de objetivos usaba `Math.random() > 0.45` en lugar de una evaluación por competencias.
 
+### 16.2 Decisiones Arquitectónicas Implementadas
+1. **Catálogo Completo de Misiones (`MISSION_CATALOG`)**:
+   - 7 misiones (`cafe`, `cliente`, `hotel`, `aeropuerto`, `entrevista`, `taxi`, `libre`) estructuradas para todos los niveles CEFR (A1–C1) y HSK (1–3), cada una con su escena, 3 objetivos específicos "Can-Do" y diálogo de apertura personalizado con traducción natural.
+2. **Presupuesto Ampliado (`maxOutputTokens: 2500`) y Extracción Limpia**:
+   - Token budget expandido para garantizar que Gemini complete la respuesta estructurada sin truncarse. Se implementó selección de partes que prioriza el bloque de texto con `"reply"` sobre partes de pensamiento (`p.thought`).
+3. **Guardián Definitivo de Traducciones**:
+   - Detección de prefijos técnicos `(ES)` y ecos idénticos al texto en inglés, garantizando subtítulos en español fluido y natural.
+4. **Vocabulario Activo en Tiempo Real**:
+   - Se renderizan chips de vocabulario clave con audio en cada turno del facilitador y se actualiza reactivamente el contador `#vocabCount` y la grilla `#vocabGrid`.
+5. **Evaluación de Objetivos por Competencias**:
+   - Eliminada la simulación aleatoria. El backend devuelve `completedObjectives: [0, 1]` evaluados por Gemini, complementado con coincidencia semántica de descriptores Can-Do.
+6. **Contextualización de Apertura**:
+   - `connect()` inicializa el historial con el saludo de apertura adaptado, permitiendo que el modelo entienda de inmediato la respuesta del alumno sin reiniciar el tema.
 
+### 16.3 Resultados y Verificación
+- **Batería de Pruebas**: 61 pruebas ejecutadas con `node --test`, **60 pasadas al 100%**, 0 fallos, 1 omitida (RLS remoto).
+- **Métricas de Latencia**: Promedio de turno de ~1474 ms y P90 de 1655 ms.
