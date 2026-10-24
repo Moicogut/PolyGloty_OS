@@ -308,3 +308,34 @@ En esta entrega se resolvió el desajuste pedagógico observado en producción (
 ### 16.3 Resultados y Verificación
 - **Batería de Pruebas**: 61 pruebas ejecutadas con `node --test`, **60 pasadas al 100%**, 0 fallos, 1 omitida (RLS remoto).
 - **Métricas de Latencia**: Promedio de turno de ~1474 ms y P90 de 1655 ms.
+
+---
+
+## 17. Tutora Wetty, Rediseño Móvil Responsivo y Sistema Curricular Progresivo
+
+### 17.1 Tutora Wetty y Avatar Ilustrado 2D
+- **Identidad**: Renombrada oficialmente de Alex a **Wetty · Tutora de Inglés**.
+- **Avatar 2D**: Reemplazado el emoji por un avatar ilustrado 2D profesional, cálido y moderno (`public/wetty.jpg` y `.tutor-avatar-img`), con aro de pulso reactivo al hablar.
+- **Síntesis de Voz Femenina**: El motor `SpeechSynthesisUtterance` filtra y prioriza voces femeninas nativas en inglés (`zira|jenny|aria|samantha|karen|victoria|susan|cathy|female|woman`).
+
+### 17.2 Optimización Móvil y Desaturación de Interfaz
+- **Diagnóstico**: En pantallas móviles (<400px), cuatro botones y el campo de entrada compartían una sola fila horizontal apretada, reduciendo el ancho del input de texto a menos de 90px y haciendo ilegible lo que el alumno escribía.
+- **Solución Arquitectónica en Dos Niveles**:
+  - **Fila Superior (`.dock-toolbar`)**: Píldoras compactas para idioma de micrófono (`Mic: EN/ES`), subtítulos (`Subtítulos: ON/OFF`) y botón para evaluar lección (`🏁 Evaluar Lección`).
+  - **Fila Principal (`.dock-main-row`)**: El contenedor de entrada toma casi el 100% del ancho con `font-size: 16px` (estándar para evitar auto-zoom indeseado en iOS Safari y maximizar legibilidad), junto al botón central de micrófono táctil de 48px.
+
+### 17.3 Sistema Curricular Progresivo (`LESSON_CURRICULUM`)
+- **Estructura por Módulos y Lecciones**: Definida en `lib/pedagogicalAgent.js` y expuesta en `/api/state` para todos los niveles CEFR (A1–C1) y HSK (1–3), con orden secuencial (1 a 6).
+- **Modal de Calificación y Avance (`#lessonCompleteModal`)**:
+  - Calificación ponderada de 0 a 100 puntos y estrellas (⭐ a ⭐⭐⭐).
+  - Desglose gráfico de competencias: Comprensión, Fluidez, Gramática y Vocabulario.
+  - Botón de repetición y botón `🚀 Siguiente Lección →` que avanza automáticamente a la siguiente lección del currículum o promueve al alumno al siguiente nivel CEFR/HSK sumando +35 XP de recompensa.
+
+### 17.4 Verificación Técnica y Evidencia
+- **Batería de Tests**: 62 pruebas unitarias (`node --test`), **61 pasadas al 100%**, 0 fallos, 1 omitida (RLS remoto).
+- **Pruebas en Viewport Móvil (390x844)**:
+  - `wetty_mobile_initial_1792817040901.png` (Avatar 2D y dock limpio).
+  - `wetty_mobile_typed_1792817065092.png` (Campo de texto amplio y 100% legible).
+  - `wetty_mobile_modal_1792817077690.png` (Modal curricular y desglose de competencias).
+- **Despliegue Continuo**: Commit `8b242a6` subido a GitHub `main` para despliegue automatizado en Render.
+
