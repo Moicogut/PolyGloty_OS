@@ -3,9 +3,14 @@
 -- Proyecto: Polyglot Voice SaaS - Fase II
 -- Objetivo: Almacenamiento multi-tenant, membresías y registro de sesiones grupales
 -- Idempotente: Ejecutable múltiples veces sin conflicto de esquema.
+-- Orden DDL: Todas las tablas se crean primero para evitar errores 42P01 de forward-reference.
 -- ============================================================================
 
--- 1. Tabla de Salas de Microgrupos
+-- ============================================================================
+-- PASO 1: Creación de Tablas e Índices
+-- ============================================================================
+
+-- 1.1 Tabla de Salas de Microgrupos
 CREATE TABLE IF NOT EXISTS public.coop_rooms (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   room_code VARCHAR(32) NOT NULL UNIQUE,
@@ -25,17 +30,66 @@ CREATE INDEX IF NOT EXISTS idx_coop_rooms_matching
 CREATE INDEX IF NOT EXISTS idx_coop_rooms_code 
   ON public.coop_rooms(room_code);
 
--- Habilitar RLS en coop_rooms
-ALTER TABLE public.coop_rooms ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "coop_rooms_select_accessible" ON public.coop_rooms;
-DROP POLICY IF EXISTS "coop_rooms_insert_authenticated" ON public.coop_rooms;
-DROP POLICY IF EXISTS "coop_rooms_update_members" ON public.coop_rooms;
+-- 1.2 Tabla de Membresías en Salas Co-Op
+CREATE TABLE IF NOT EXISTS public.coop_memberships (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  room_id UUID NOT NULL REFERENCES public.coop_rooms(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  role VARCHAR(16) NOT NULL DEFAULT 'member' CHECK (role IN ('host', 'member')),
+  peer_feedback_score NUMERIC(4,2) DEFAULT NULL,
+  talking_time_seconds INTEGER NOT NULL DEFAULT 0,
+  turn_count INTEGER NOT NULL DEFAULT 0,
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_coop_room_user UNIQUE (room_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_coop_memberships_user ON public.coop_memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_coop_memberships_room ON public.coop_memberships(room_id);
+
+
+-- 1.3 Tabla de Registro y Auditoría de Sesiones Grupales Co-Op
+CREATE TABLE IF NOT EXISTS public.coop_sessions_log (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  room_id UUID NOT NULL REFERENCES public.coop_rooms(id) ON DELETE CASCADE,
+  transcript_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+  task_goals_achieved JSONB NOT NULL DEFAULT '[]'::jsonb,
+  facilitator_summary TEXT,
+  duration_seconds INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_coop_sessions_log_room ON public.coop_sessions_log(room_id);
+
+
+-- ============================================================================
+-- PASO 2: Habilitación de Row Level Security (RLS) y Permisos
+-- ============================================================================
+
+ALTER TABLE public.coop_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.coop_memberships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.coop_sessions_log ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.coop_rooms FROM anon;
 GRANT SELECT, INSERT, UPDATE ON public.coop_rooms TO authenticated, service_role;
 
--- Lectura: salas en espera o activas, o donde el usuario sea miembro
+REVOKE ALL ON public.coop_memberships FROM anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.coop_memberships TO authenticated, service_role;
+
+REVOKE ALL ON public.coop_sessions_log FROM anon;
+GRANT SELECT, INSERT ON public.coop_sessions_log TO authenticated, service_role;
+
+
+-- ============================================================================
+-- PASO 3: Políticas RLS de Seguridad Multi-Tenant
+-- ============================================================================
+
+-- 3.1 Políticas para public.coop_rooms
+DROP POLICY IF EXISTS "coop_rooms_select_accessible" ON public.coop_rooms;
+DROP POLICY IF EXISTS "coop_rooms_insert_authenticated" ON public.coop_rooms;
+DROP POLICY IF EXISTS "coop_rooms_update_members" ON public.coop_rooms;
+
+-- Lectura: salas en espera/activas o creadas por el usuario o donde sea miembro
 CREATE POLICY "coop_rooms_select_accessible"
   ON public.coop_rooms FOR SELECT
   TO authenticated
@@ -49,7 +103,7 @@ CREATE POLICY "coop_rooms_select_accessible"
     )
   );
 
--- Creación: cualquier usuario autenticado
+-- Inserción: creador autenticado
 CREATE POLICY "coop_rooms_insert_authenticated"
   ON public.coop_rooms FOR INSERT
   TO authenticated
@@ -77,43 +131,22 @@ CREATE POLICY "coop_rooms_update_members"
   );
 
 
--- 2. Tabla de Membresías en Salas Co-Op
-CREATE TABLE IF NOT EXISTS public.coop_memberships (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  room_id UUID NOT NULL REFERENCES public.coop_rooms(id) ON DELETE CASCADE,
-  user_id TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  role VARCHAR(16) NOT NULL DEFAULT 'member' CHECK (role IN ('host', 'member')),
-  peer_feedback_score NUMERIC(4,2) DEFAULT NULL,
-  talking_time_seconds INTEGER NOT NULL DEFAULT 0,
-  turn_count INTEGER NOT NULL DEFAULT 0,
-  joined_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT unique_coop_room_user UNIQUE (room_id, user_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_coop_memberships_user ON public.coop_memberships(user_id);
-CREATE INDEX IF NOT EXISTS idx_coop_memberships_room ON public.coop_memberships(room_id);
-
--- Habilitar RLS en coop_memberships
-ALTER TABLE public.coop_memberships ENABLE ROW LEVEL SECURITY;
-
+-- 3.2 Políticas para public.coop_memberships
 DROP POLICY IF EXISTS "coop_memberships_select_room" ON public.coop_memberships;
 DROP POLICY IF EXISTS "coop_memberships_insert_own" ON public.coop_memberships;
 DROP POLICY IF EXISTS "coop_memberships_update_own" ON public.coop_memberships;
 DROP POLICY IF EXISTS "coop_memberships_delete_own" ON public.coop_memberships;
 
-REVOKE ALL ON public.coop_memberships FROM anon;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.coop_memberships TO authenticated, service_role;
-
--- Lectura: ver miembros de salas en las que se participa
+-- Lectura: miembros de salas en espera/activas o sus propias membresías (sin recursión)
 CREATE POLICY "coop_memberships_select_room"
   ON public.coop_memberships FOR SELECT
   TO authenticated
   USING (
     user_id = auth.uid()::text OR
     EXISTS (
-      SELECT 1 FROM public.coop_memberships self
-      WHERE self.room_id = public.coop_memberships.room_id
-        AND self.user_id = auth.uid()::text
+      SELECT 1 FROM public.coop_rooms r
+      WHERE r.id = public.coop_memberships.room_id
+        AND (r.status IN ('waiting', 'active') OR r.created_by = auth.uid()::text)
     )
   );
 
@@ -137,27 +170,9 @@ CREATE POLICY "coop_memberships_delete_own"
   USING (user_id = auth.uid()::text);
 
 
--- 3. Tabla de Registro y Auditoría de Sesiones Grupales Co-Op
-CREATE TABLE IF NOT EXISTS public.coop_sessions_log (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  room_id UUID NOT NULL REFERENCES public.coop_rooms(id) ON DELETE CASCADE,
-  transcript_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-  task_goals_achieved JSONB NOT NULL DEFAULT '[]'::jsonb,
-  facilitator_summary TEXT,
-  duration_seconds INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_coop_sessions_log_room ON public.coop_sessions_log(room_id);
-
--- Habilitar RLS en coop_sessions_log
-ALTER TABLE public.coop_sessions_log ENABLE ROW LEVEL SECURITY;
-
+-- 3.3 Políticas para public.coop_sessions_log
 DROP POLICY IF EXISTS "coop_sessions_log_select_members" ON public.coop_sessions_log;
 DROP POLICY IF EXISTS "coop_sessions_log_insert_members" ON public.coop_sessions_log;
-
-REVOKE ALL ON public.coop_sessions_log FROM anon;
-GRANT SELECT, INSERT ON public.coop_sessions_log TO authenticated, service_role;
 
 CREATE POLICY "coop_sessions_log_select_members"
   ON public.coop_sessions_log FOR SELECT
