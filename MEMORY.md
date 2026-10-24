@@ -511,3 +511,25 @@ Se implementó el módulo de auditoría de suficiencia lingüística para medir 
   - Subagente de navegador completó el flujo E2E: Banner en Hub $\rightarrow$ Test de Ubicación $\rightarrow$ Fase A (6 preguntas contestadas con timer) $\rightarrow$ Fase B (redacción de 50 palabras auditada) $\rightarrow$ Fase C (entrevista oral con Wetty) $\rightarrow$ Dictamen final con reporte porcentual.
   - Grabación completa de la sesión: `fase3_proficiency_audit_flow_1792862321281.webp`.
   - Capturas registradas: `hub_proficiency_banner_1792862401563.png`, `proficiency_intro_modal_1792862468058.png`, `proficiency_exam_result_1792863587168.png`.
+
+---
+
+## 22. Cierre Oficial de Fase I (v1.0.0) y Preparación para Fase II
+
+### 22.1 Estado del Repositorio para Respaldo Oficial
+- **Integridad y Limpieza**:
+  - Repositorio remoto: `https://github.com/Moicogut/PolyGloty_OS.git` (Rama `main`).
+  - `.gitignore` robustecido: credenciales (`.env`), almacenamiento local (`data/*.json`, `data/*.jsonl`), dependencias (`node_modules/`) y logs temporales están estrictamente aislados del control de versiones.
+  - Zero-Dependencies Backend: Node.js $\ge 20.6$ nativo sin paquetes de terceros en producción.
+- **Base de Datos Supabase Cloud Sincronizada**:
+  - Migración `004_curriculum_suficiencia.sql` aplicada con RLS estricto (`user_credits`, `proficiency_audits`, `user_challenges`).
+  - Sincronización cloud activa en `lib/supabase.js` (`recordLessonCredit`, `recordProficiencyAudit`) con fallback local automático.
+- **Batería de Pruebas**: 73 tests ejecutados en `npm test` (**72 aprobados, 0 fallos, 1 omitido por entorno remoto**). Latencia de diálogo promedio en 1474 ms.
+- **Versión Oficial Sellada**: Tag Git `v1.0.0`.
+
+### 22.2 Hoja de Ruta Prioritaria para Fase II
+1. **Expansión Curricular A2–B2**: Desglose pedagógico de los 36 créditos para los niveles A2, B1 y B2 en inglés y español.
+2. **Entrenamiento Especializado en Chino Mandarín (HSK)**: Calibración del reconocedor de tonos con Wetty y retroalimentación fonética pinyin.
+3. **Generación Vectorizada de Certificados PDF**: Descarga directa de diplomas con firma SHA-256 y código QR sin requerir impresión de navegador.
+4. **Modo PWA Offline con IndexedDB**: Almacenamiento local seguro de tarjetas SRS y árbol curricular para práctica sin conexión.
+
