@@ -226,8 +226,44 @@ En esta entrega se cerraron y verificaron con evidencia real las tareas pendient
   - Ejecutar 20 turnos en celular real (Chrome Android y Safari iOS) y correr `node scripts/latency-report.js`.
 
 ### 13.3 Métricas Finales
-- Suite de tests: **47 pasando, 0 fallos, 1 omitido defensivamente (48 totales)** en `npm test`.
+- Suite de tests: **53 pasando, 0 fallos, 1 omitido defensivamente (54 totales)** en `npm test`.
 - Rama: `fix/parte-1c`.
+
+---
+
+## 14. Parte 2: Agente Pedagógico por Competencias y Facilitador de Lenguaje (Completada)
+
+En esta entrega se resolvió el desajuste pedagógico observado en producción (alumno en nivel A1 expuesto a peticiones de nivel B2/C1, fallas de traducción en segundo turno y falta de mediación correctiva), transformando a Polyglot Voice en una plataforma basada en competencias lingüísticas verificables (CEFR/MCER y HSK) con modelo de Agente Dual.
+
+### 14.1 Diagnóstico de Causa Raíz
+1. **Sobrecarga Cognitiva en A1**:
+   - Escenarios como "Reunión con cliente" exigían presentar y defender propuestas de consultoría a principiantes absolutos, violando la Zona de Desarrollo Próximo (ZDP).
+2. **Subtítulos Perdidos**:
+   - Llamadas a Gemini sin `responseSchema` permitían que el modelo omitiera esporádicamente la clave `"translation"`, dejando burbujas sin traducción al español.
+3. **Ausencia de Facilitación y Modelado Nativo**:
+   - Ante errores clásicos de auxiliares (ej. responder *"Yes, I do"* a *"Are you ready?"*), el sistema no retroalimentaba ni enseñaba la respuesta nativa correspondiente.
+
+### 14.2 Decisiones Arquitectónicas Implementadas
+1. **Skill de Agente Pedagógico (`.agents/skills/pedagogical-language-coach/SKILL.md`)**:
+   - Formalizado el skill que rige las reglas de aprendizaje por competencias, techo léxico, longitudes máximas de turno y andamiaje situacional.
+2. **Motor Programático (`lib/pedagogicalAgent.js`)**:
+   - `LEVEL_RULES`: Diccionario de restricciones sintácticas, léxicas y directivas de habla para A1–C1 y HSK 1–5.
+   - `adaptMissionForLevel()`: Adapta la escena y objetivos de roleplay según el nivel (ej. en A1, "Reunión con cliente" se convierte en recibir al cliente en recepción y ofrecer café).
+   - `GEMINI_PEDAGOGICAL_SCHEMA`: Esquema OpenAPI estricto que exige obligatoriamente `reply`, `translation`, `facilitator` (`userAnalysis`, `correctForm`, `nativeAlternative`, `encouragement`, `repetitionPrompt`, `competencyFocus`), `vocabulary` y `competencyScores`.
+   - `repairAndGuaranteePedagogicalResponse()`: Guardián de resiliencia que garantiza que ninguna respuesta carezca de traducción ni de evaluación contrastiva.
+3. **Recuadro del Facilitador en UI (`public/styles.css`, `public/app.js`)**:
+   - Nuevo componente `.facilitator-card` integrado en el flujo de conversación:
+     - 🌟 **Aliento Permanente**: Mensaje motivador y cálido en cada turno para generar seguridad psicológica.
+     - 🎓 **Diagnóstico Pedagógico**: Explicación clara en español de la regla o desajuste gramatical.
+     - ✅ **Forma Correcta Estándar**: Modelo lingüístico apropiado para el nivel del alumno.
+     - 💎 **Alternativa Nativa**: Cómo lo expresaría un nativo real con botón `🔊 Escuchar`.
+     - 🔁 **Repetición Contextual**: Ejercicio de pronunciación sugerido con botón `🎙️ Repetir frase`.
+4. **Respaldo de Traducción 100%**:
+   - Subtítulos obligatorios en cada turno del tutor con toggle general `[ 🌐 Trad: ON/OFF ]`.
+
+### 14.3 Verificación y Estado de Pruebas
+- **Pruebas Unitarias e Integración**: Creado `test/pedagogical.test.js` con 7 pruebas que validan adaptación de misiones, restricciones de nivel A1, prompts pedagógicos, garantías de traducción y el escenario E2E exacto de las capturas (*"Yes, I do"* $\rightarrow$ *"Yes, I am"* / *"Sure, all set!"*).
+- **Suite Completa (`npm test`)**: **53 pruebas pasando al 100%**, 0 fallos, 1 omitida defensivamente (RLS en vivo sin credenciales). Latencia promedio sostenida en ~1474 ms.
 
 
 

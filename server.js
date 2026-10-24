@@ -9,6 +9,12 @@ import { validateGradePayload, validateDrillPayload, validateToolPayload, valida
 import { logger } from "./lib/logger.js";
 import { RateLimiter, UserUsageLimiter } from "./lib/limiter.js";
 import { SupabaseAdapter } from "./lib/supabase.js";
+import {
+  buildPedagogicalSystemInstruction,
+  adaptMissionForLevel,
+  GEMINI_PEDAGOGICAL_SCHEMA,
+  repairAndGuaranteePedagogicalResponse
+} from "./lib/pedagogicalAgent.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 
@@ -234,20 +240,25 @@ const routes = {
     if (isGemini) {
       const gkey = process.env.GEMINI_API_KEY;
       if (!gkey) return send(res, 503, { error: "Falta GEMINI_API_KEY en el archivo .env" });
-      const cfg = buildGeminiSession({
-        lang: lang(url.searchParams.get("lang")),
-        level: url.searchParams.get("level"),
-        missionId: url.searchParams.get("mission"),
+      const langCode = lang(url.searchParams.get("lang"));
+      const levelCode = url.searchParams.get("level") || "A1";
+      const missionId = url.searchParams.get("mission") || "libre";
+      const baseMission = MISSIONS.find((x) => x.id === missionId) || MISSIONS[0];
+      const adapted = adaptMissionForLevel(baseMission, levelCode, langCode);
+      const systemInstruction = buildPedagogicalSystemInstruction({
+        lang: langCode,
+        level: levelCode,
+        mission: adapted,
         state: state.data,
-        model: GEMINI_MODEL,
+        recentErrors: state.data.errors || [],
       });
       logger.info("gemini_session_created", { latencyMs: Date.now() - start, model: GEMINI_MODEL }, state.tenantId);
       return send(res, 200, {
         provider: "gemini",
         model: GEMINI_MODEL,
-        systemInstruction: cfg.systemInstruction,
-        lang: cfg.lang,
-        level: cfg.level,
+        systemInstruction,
+        lang: langCode,
+        level: levelCode,
       });
     }
 
@@ -326,6 +337,10 @@ const routes = {
     }
 
     const langCode = lang(b.lang);
+    const levelCode = b.level || "A1";
+    const baseMission = MISSIONS.find((x) => x.id === b.mission) || MISSIONS[0];
+    const adapted = adaptMissionForLevel(baseMission, levelCode, langCode);
+
     let geminiContents = b.messages.map((m) => {
       if (m.parts && Array.isArray(m.parts)) return m;
       return {
@@ -334,12 +349,12 @@ const routes = {
       };
     });
 
-    const cfg = buildGeminiSession({
+    const systemInstruction = buildPedagogicalSystemInstruction({
       lang: langCode,
-      level: b.level,
-      missionId: b.mission,
+      level: levelCode,
+      mission: adapted,
       state: state.data,
-      model: GEMINI_MODEL,
+      recentErrors: state.data.errors || [],
     });
 
     const candidateModels = [
@@ -358,20 +373,34 @@ const routes = {
       for (const candModel of candidateModels) {
         try {
           const modelEndpoint = candModel.startsWith("models/") ? candModel.replace("models/", "") : candModel;
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${key}`, {
+          const reqBody = {
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents: geminiContents,
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 900,
+              responseMimeType: "application/json",
+              responseSchema: GEMINI_PEDAGOGICAL_SCHEMA,
+            },
+          };
+
+          let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${key}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              systemInstruction: { parts: [{ text: cfg.systemInstruction }] },
-              contents: geminiContents,
-              generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 800,
-                responseMimeType: "application/json",
-              },
-            }),
+            body: JSON.stringify(reqBody),
             signal: AbortSignal.timeout(15000),
           });
+
+          // Si el endpoint no soporta responseSchema, reintentar sin él de forma transparente
+          if (!response.ok && response.status === 400) {
+            delete reqBody.generationConfig.responseSchema;
+            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelEndpoint}:generateContent?key=${key}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(reqBody),
+              signal: AbortSignal.timeout(15000),
+            });
+          }
 
           const data = await response.json();
           if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
@@ -391,7 +420,7 @@ const routes = {
         return send(res, 503, { error: `Gemini temporalmente no disponible: ${lastError || "Servidores ocupados"}` });
       }
 
-      let parsed = { reply: "", translation: "", vocabulary: [], feedback: null };
+      let parsed = null;
       try {
         parsed = JSON.parse(rawText.trim());
       } catch {
@@ -401,50 +430,24 @@ const routes = {
         }
       }
 
-      // Si aún no hay reply limpio, extraerlo con regex de las claves JSON o usar texto plano sin llaves
-      if (!parsed.reply) {
-        const replyMatch = rawText.match(/"reply"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/i);
-        if (replyMatch) {
-          try {
-            parsed.reply = JSON.parse(`"${replyMatch[1]}"`);
-          } catch {
-            parsed.reply = replyMatch[1];
-          }
-        } else {
-          parsed.reply = rawText.replace(/[{}"[\]]/g, "").trim();
-        }
-      }
-
-      if (!parsed.translation) {
-        const transMatch = rawText.match(/"translation"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/i);
-        if (transMatch) {
-          try {
-            parsed.translation = JSON.parse(`"${transMatch[1]}"`);
-          } catch {
-            parsed.translation = transMatch[1];
-          }
-        }
-      }
+      const lastUserText = [...geminiContents].reverse().find((m) => m.role === "user")?.parts?.[0]?.text || "";
+      const guaranteed = repairAndGuaranteePedagogicalResponse(parsed, rawText, lastUserText, levelCode, langCode);
 
       // Actualizar competencias de proceso si el feedback contiene notas o puntuaciones
-      if (parsed.feedback) {
+      if (guaranteed.competencyScores) {
         const comp = state.data.competencies || { grammar: 60, vocabulary: 65, fluency: 55, comprehension: 70, milestones: [] };
-        const sc = parsed.feedback.scores || parsed.feedback;
-        if (Number.isFinite(sc.grammarScore || sc.grammar)) comp.grammar = Math.min(100, Math.round(comp.grammar * 0.7 + (sc.grammarScore || sc.grammar) * 0.3));
-        if (Number.isFinite(sc.vocabScore || sc.vocabulary)) comp.vocabulary = Math.min(100, Math.round(comp.vocabulary * 0.7 + (sc.vocabScore || sc.vocabulary) * 0.3));
-        if (Number.isFinite(sc.fluencyScore || sc.fluency)) comp.fluency = Math.min(100, Math.round(comp.fluency * 0.7 + (sc.fluencyScore || sc.fluency) * 0.3));
-        if (Number.isFinite(sc.comprehensionScore || sc.comprehension)) comp.comprehension = Math.min(100, Math.round(comp.comprehension * 0.7 + (sc.comprehensionScore || sc.comprehension) * 0.3));
-        const msId = parsed.feedback.milestoneId || parsed.feedback.milestone;
-        if (msId && typeof msId === "string" && !comp.milestones.includes(msId)) {
-          comp.milestones.push(msId);
-        }
+        const sc = guaranteed.competencyScores;
+        if (Number.isFinite(sc.grammar)) comp.grammar = Math.min(100, Math.round(comp.grammar * 0.7 + sc.grammar * 0.3));
+        if (Number.isFinite(sc.vocabulary)) comp.vocabulary = Math.min(100, Math.round(comp.vocabulary * 0.7 + sc.vocabulary * 0.3));
+        if (Number.isFinite(sc.fluency)) comp.fluency = Math.min(100, Math.round(comp.fluency * 0.7 + sc.fluency * 0.3));
+        if (Number.isFinite(sc.comprehension)) comp.comprehension = Math.min(100, Math.round(comp.comprehension * 0.7 + sc.comprehension * 0.3));
         state.data.competencies = comp;
       }
 
       // Registrar nuevo vocabulario de avance de la sesión
-      if (Array.isArray(parsed.vocabulary) && parsed.vocabulary.length > 0) {
+      if (Array.isArray(guaranteed.vocabulary) && guaranteed.vocabulary.length > 0) {
         if (!Array.isArray(state.data.sessionVocab)) state.data.sessionVocab = [];
-        for (const item of parsed.vocabulary) {
+        for (const item of guaranteed.vocabulary) {
           if (item && item.word && !state.data.sessionVocab.some((v) => v.word.toLowerCase() === item.word.toLowerCase())) {
             state.data.sessionVocab.unshift({
               word: item.word,
@@ -475,10 +478,11 @@ const routes = {
       }, state.tenantId);
 
       return send(res, 200, {
-        reply: parsed.reply || "",
-        translation: parsed.translation || "",
-        vocabulary: Array.isArray(parsed.vocabulary) ? parsed.vocabulary : [],
-        feedback: parsed.feedback || null,
+        reply: guaranteed.reply,
+        translation: guaranteed.translation,
+        facilitator: guaranteed.facilitator,
+        vocabulary: guaranteed.vocabulary,
+        feedback: { tip: guaranteed.facilitator.userAnalysis },
         competencies: state.data.competencies,
         xp,
         latency: {

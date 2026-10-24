@@ -119,7 +119,10 @@ $("#lang").addEventListener("change", async () => {
   await refresh();
   loadDrills();
 });
-$("#level").addEventListener("change", () => store.set(`level_${lang()}`, $("#level").value));
+$("#level").addEventListener("change", () => {
+  store.set(`level_${lang()}`, $("#level").value);
+  renderObjectives();
+});
 $("#mission").addEventListener("change", () => {
   store.set("mission", $("#mission").value);
   done.clear();
@@ -128,6 +131,35 @@ $("#mission").addEventListener("change", () => {
 
 const done = new Set();
 const mission = () => S.missions.find((m) => m.id === $("#mission").value);
+
+function getAdaptedMission() {
+  const m = mission();
+  if (!m) return null;
+  const lv = $("#level")?.value || "A1";
+  if (m.id === "cliente") {
+    if (lv === "A1" || lv === "HSK1") {
+      return {
+        ...m,
+        objectives: [
+          "Saludar y dar la bienvenida al cliente",
+          "Confirmar el nombre del cliente",
+          "Ofrecer una bebida (agua o café)",
+        ],
+      };
+    }
+    if (lv === "A2" || lv === "HSK2") {
+      return {
+        ...m,
+        objectives: [
+          "Saludar y confirmar la hora de la reunión",
+          "Indicar la sala o lugar",
+          "Preguntar si necesita algo antes de comenzar",
+        ],
+      };
+    }
+  }
+  return m;
+}
 
 // Subtítulos y traductor opcional
 let showTranslation = store.get("show_trans", "true") === "true";
@@ -156,8 +188,84 @@ $("#toggleTransBtn")?.addEventListener("click", () => {
 });
 
 function renderObjectives() {
-  const m = mission();
+  const m = getAdaptedMission();
   $("#objs").replaceChildren(...(m ? m.objectives : []).map((o, i) => el("li", done.has(i) ? "done" : "", `${done.has(i) ? "✓" : "○"} ${o}`)));
+}
+
+function renderFacilitatorCard(fac) {
+  if (!fac || !fac.userAnalysis) return null;
+  const card = el("div", "facilitator-card");
+
+  // Header del Facilitador
+  const header = el("div", "facilitator-header");
+  const title = el("div", "facilitator-title");
+  title.innerHTML = `<span>🎓</span> <b>Facilitador Pedagógico</b>`;
+  const badge = el("span", "facilitator-badge", fac.competencyFocus ? fac.competencyFocus.toUpperCase() : "COACH");
+  header.append(title, badge);
+  card.append(header);
+
+  // Aliento permanente / Motivación
+  if (fac.encouragement) {
+    const encDiv = el("div", "facilitator-encouragement");
+    encDiv.innerHTML = `<span>🌟</span> <span>${fac.encouragement}</span>`;
+    card.append(encDiv);
+  }
+
+  // Diagnóstico pedagógico en español
+  const analysis = el("div", "facilitator-analysis");
+  analysis.textContent = fac.userAnalysis;
+  card.append(analysis);
+
+  // Alternativas: Forma correcta estándar y alternativa nativa idiomática
+  if (fac.correctForm || fac.nativeAlternative) {
+    const altsGrid = el("div", "facilitator-alternatives");
+
+    if (fac.correctForm) {
+      const boxCorrect = el("div", "alt-box");
+      const lbl = el("div", "alt-label correct", "✅ Forma Correcta");
+      const txt = el("div", "alt-text", fac.correctForm);
+      boxCorrect.append(lbl, txt);
+      altsGrid.append(boxCorrect);
+    }
+
+    if (fac.nativeAlternative) {
+      const boxNative = el("div", "alt-box native-box");
+      const lbl = el("div", "alt-label native", "💎 Cómo lo diría un Nativo");
+      const txt = el("div", "alt-text", fac.nativeAlternative);
+      const actions = el("div", "alt-actions");
+      const listenBtn = el("button", "alt-listen-btn", "🔊 Escuchar");
+      listenBtn.type = "button";
+      listenBtn.onclick = () => speakVoice(fac.nativeAlternative);
+      actions.append(listenBtn);
+      boxNative.append(lbl, txt, actions);
+      altsGrid.append(boxNative);
+    }
+
+    card.append(altsGrid);
+  }
+
+  // Repetición contextual para niveles iniciales
+  if (fac.repetitionPrompt) {
+    const repDiv = el("div", "facilitator-repetition");
+    const repText = el("span", "", `🔁 ${fac.repetitionPrompt}`);
+    const repBtn = el("button", "rep-action-btn", "🎙️ Repetir frase");
+    repBtn.type = "button";
+    repBtn.onclick = () => {
+      const clean = fac.repetitionPrompt.replace(/^[«"]|[»"]$/g, "").replace(/^Repite en voz alta:\s*«?/i, "").replace(/[»"]$/, "");
+      const chatInput = $("#chatText");
+      if (chatInput) {
+        chatInput.value = clean;
+        chatInput.focus();
+      }
+      speakVoice(clean);
+    };
+    repDiv.append(repText, repBtn);
+    card.append(repDiv);
+  }
+
+  $("#chat").append(card);
+  $("#chat").scrollTop = 1e9;
+  return card;
 }
 
 function say(cls, text, meta = {}) {
@@ -435,11 +543,11 @@ async function sendTurnToTutor(userText, sttDurationMs = 0) {
 
     say("ai", reply, {
       translation: res.translation,
-      tip: res.feedback?.tip || null,
+      tip: null,
     });
 
-    if (res.feedback?.tip && $("#liveFeedbackNotice")) {
-      $("#liveFeedbackNotice").textContent = `💡 ${res.feedback.tip}`;
+    if (res.facilitator) {
+      renderFacilitatorCard(res.facilitator);
     }
 
     status("Conectado: responde por texto o voz");

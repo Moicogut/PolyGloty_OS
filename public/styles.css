@@ -629,6 +629,182 @@ button.danger:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* =========================================================================
+   RECUADRO DEL FACILITADOR PEDAGÓGICO (Language Learning Coach & Facilitator)
+   ========================================================================= */
+.facilitator-card {
+  align-self: stretch;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin: 6px 0 14px 0;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+  animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.facilitator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.facilitator-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #a5b4fc;
+  letter-spacing: 0.3px;
+}
+
+.facilitator-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(99, 102, 241, 0.18);
+  color: #c7d2fe;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.facilitator-encouragement {
+  font-size: 13px;
+  color: #34d399;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.08);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid #10b981;
+  font-weight: 500;
+}
+
+.facilitator-analysis {
+  font-size: 13.5px;
+  color: #f1f5f9;
+  line-height: 1.55;
+  margin-bottom: 12px;
+}
+
+.facilitator-alternatives {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 640px) {
+  .facilitator-alternatives {
+    grid-template-columns: 1fr;
+  }
+}
+
+.alt-box {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alt-box.native-box {
+  border-color: rgba(167, 139, 250, 0.3);
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.35), rgba(15, 23, 42, 0.65));
+}
+
+.alt-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.alt-label.correct {
+  color: #38bdf8;
+}
+
+.alt-label.native {
+  color: #c084fc;
+}
+
+.alt-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.4;
+}
+
+.alt-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.alt-listen-btn {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #e0e7ff;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.alt-listen-btn:hover {
+  background: rgba(99, 102, 241, 0.35);
+  border-color: rgba(99, 102, 241, 0.6);
+  transform: translateY(-1px);
+}
+
+.facilitator-repetition {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px dashed rgba(234, 179, 8, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #fef08a;
+}
+
+.rep-action-btn {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 12px;
+  background: rgba(234, 179, 8, 0.2);
+  color: #fff;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rep-action-btn:hover {
+  background: rgba(234, 179, 8, 0.35);
+  transform: translateY(-1px);
+}
+
 /* Barra interactiva de chat (Texto + Voz + Traductor) */
 .chat-input-bar {
   display: flex;
