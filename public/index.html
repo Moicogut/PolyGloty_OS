@@ -41,15 +41,17 @@
     <div class="tutor-hero">
       <div class="tutor-header-left">
         <div class="tutor-avatar-wrap">
-          <div class="tutor-avatar" id="avatarIcon">🧑🏼</div>
+          <div class="tutor-avatar" id="avatarIcon">
+            <img id="avatarImg" src="/wetty.jpg" alt="Wetty · Tutora de Inglés" class="tutor-avatar-img">
+          </div>
           <div class="tutor-pulse-ring"></div>
         </div>
         <div class="tutor-info">
           <div class="tutor-name-row">
-            <h3 id="tutorName">Alex · Tutor de Inglés</h3>
+            <h3 id="tutorName">Wetty · Tutora de Inglés</h3>
             <span class="tutor-status-badge" id="tutorBadge">Listo</span>
           </div>
-          <p id="tutorRole">Conversación inmersiva para fluidez y confianza inmediata.</p>
+          <p id="tutorRole">Conversación guiada por competencias para fluidez inmediata y confianza.</p>
         </div>
       </div>
       <div class="tutor-header-actions">
@@ -106,27 +108,36 @@
 
     <!-- Dock inferior unificado de conversación (Estilo Praktika) -->
     <div class="conversation-dock">
-      <!-- Selector de idioma del micrófono para evitar confusiones de pronunciación -->
-      <button id="speechLangToggleBtn" type="button" class="dock-pill-btn" title="Alternar idioma de escucha del micrófono">
-        <span id="speechLangIcon">🗣️</span> <b id="speechLangLabel">EN</b>
-      </button>
+      <!-- Toolbar superior de opciones secundarias (limpio, no satura el input) -->
+      <div class="dock-toolbar">
+        <button id="speechLangToggleBtn" type="button" class="dock-pill-btn" title="Alternar idioma de escucha del micrófono">
+          <span id="speechLangIcon">🗣️</span> <span class="dock-pill-label">Mic: <b id="speechLangLabel">EN</b></span>
+        </button>
 
-      <button id="toggleTransBtn" type="button" class="dock-pill-btn active" title="Alternar traducción al español">
-        <span>🌐</span> <b id="transStateLabel">ES</b>
-      </button>
+        <button id="toggleTransBtn" type="button" class="dock-pill-btn active" title="Alternar traducción al español">
+          <span>🌐</span> <span class="dock-pill-label">Subtítulos: <b id="transStateLabel">ES</b></span>
+        </button>
 
-      <div class="dock-input-wrap">
-        <input id="chatText" type="text" placeholder="Escribe o mantén el micrófono..." autocomplete="off">
-        <button id="sendBtn" type="button" class="dock-send-btn" title="Enviar respuesta" disabled>
-          <span>➤</span>
+        <button id="finishLessonManualBtn" type="button" class="dock-pill-btn dock-pill-finish" title="Completar y calificar lección">
+          <span>🏁</span> <span class="dock-pill-label">Evaluar Lección</span>
         </button>
       </div>
 
-      <!-- Botón central principal de Voz -->
-      <button id="voiceBtn" type="button" class="main-voice-btn" title="Toca o mantén presionado para hablar" disabled>
-        <span class="mic-icon">🎙️</span>
-        <span class="mic-wave"></span>
-      </button>
+      <!-- Fila principal de entrada: amplia, legible y responsiva -->
+      <div class="dock-main-row">
+        <div class="dock-input-wrap">
+          <input id="chatText" type="text" placeholder="Escribe tu mensaje a Wetty..." autocomplete="off">
+          <button id="sendBtn" type="button" class="dock-send-btn" title="Enviar mensaje" disabled>
+            <span>➤</span>
+          </button>
+        </div>
+
+        <!-- Botón central principal de Voz -->
+        <button id="voiceBtn" type="button" class="main-voice-btn" title="Toca o mantén presionado para hablar" disabled>
+          <span class="mic-icon">🎙️</span>
+          <span class="mic-wave"></span>
+        </button>
+      </div>
     </div>
 
     <div class="chat-footer-stats">
@@ -410,6 +421,62 @@
         <input id="zhWaitlistEmail" type="email" placeholder="tu@correo.com" required>
         <button type="submit" class="primary">Avisarme cuando esté listo</button>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE FINALIZACIÓN DE LECCIÓN / SISTEMA CURRICULAR PROGRESIVO -->
+<div id="lessonCompleteModal" class="modal-overlay" hidden>
+  <div class="modal-card lesson-modal-card">
+    <div class="lesson-modal-header">
+      <div class="lesson-trophy-badge">🏆</div>
+      <div>
+        <h3 id="lessonModalTitle" style="margin: 0; font-size: 20px;">¡Lección Completada!</h3>
+        <p id="lessonModalSubtitle" class="muted small" style="margin: 4px 0 0 0;">Excelente progreso pedagógico</p>
+      </div>
+      <button id="closeLessonModal" type="button" class="modal-close">&times;</button>
+    </div>
+
+    <div class="lesson-score-display">
+      <div class="lesson-score-bubble">
+        <span id="lessonScoreNum" class="lesson-score-num">95</span>
+        <span class="lesson-score-denom">pts</span>
+      </div>
+      <div class="lesson-stars" id="lessonStars">⭐⭐⭐</div>
+      <p id="lessonVerdict" class="lesson-verdict-text">¡Dominio sobresaliente del nivel!</p>
+    </div>
+
+    <div class="lesson-competencies-card">
+      <div class="lesson-comp-header">Competencias Evaluadas</div>
+      <div class="comp-meter-row">
+        <span>Comprensión</span>
+        <div class="bar"><i id="compMeterCompr" style="width: 88%;"></i></div>
+        <b id="compValCompr">88%</b>
+      </div>
+      <div class="comp-meter-row">
+        <span>Fluidez</span>
+        <div class="bar"><i id="compMeterFluency" style="width: 82%;"></i></div>
+        <b id="compValFluency">82%</b>
+      </div>
+      <div class="comp-meter-row">
+        <span>Gramática</span>
+        <div class="bar"><i id="compMeterGrammar" style="width: 90%;"></i></div>
+        <b id="compValGrammar">90%</b>
+      </div>
+      <div class="comp-meter-row">
+        <span>Vocabulario</span>
+        <div class="bar"><i id="compMeterVocab" style="width: 85%;"></i></div>
+        <b id="compValVocab">85%</b>
+      </div>
+    </div>
+
+    <div class="lesson-modal-actions">
+      <button id="repeatLessonBtn" type="button" class="dock-pill-btn" style="flex: 1; padding: 12px; font-size: 13px; justify-content: center;">
+        <span>🔄</span> Repetir
+      </button>
+      <button id="nextLessonBtn" type="button" class="primary" style="flex: 2; padding: 12px; font-size: 14px; font-weight: 700; border-radius: var(--radius-full);">
+        <span>🚀 Siguiente Lección →</span>
+      </button>
     </div>
   </div>
 </div>

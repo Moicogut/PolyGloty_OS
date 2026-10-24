@@ -107,8 +107,27 @@ function fillSelectors() {
   const L = S.langs[lang()];
   const savedLv = store.get(`level_${lang()}`, L.levels[0]);
   $("#level").replaceChildren(...L.levels.map((v) => { const o = el("option", "", v); o.value = v; o.selected = v === savedLv; return o; }));
+
   const savedM = store.get("mission", S.missions[0].id);
-  $("#mission").replaceChildren(...S.missions.map((m) => { const o = el("option", "", m.title); o.value = m.id; o.selected = m.id === savedM; return o; }));
+  const currentLang = lang();
+  const currentLv = $("#level").value || L.levels[0];
+  const currList = S.curriculum?.[currentLang]?.[currentLv];
+
+  if (Array.isArray(currList) && currList.length > 0) {
+    $("#mission").replaceChildren(...currList.map((item) => {
+      const o = el("option", "", `Lección ${item.order}: ${item.title}`);
+      o.value = item.id;
+      o.selected = item.id === savedM;
+      return o;
+    }));
+  } else {
+    $("#mission").replaceChildren(...S.missions.map((m) => {
+      const o = el("option", "", m.title);
+      o.value = m.id;
+      o.selected = m.id === savedM;
+      return o;
+    }));
+  }
   renderObjectives();
 }
 
@@ -121,6 +140,7 @@ $("#lang").addEventListener("change", async () => {
 });
 $("#level").addEventListener("change", () => {
   store.set(`level_${lang()}`, $("#level").value);
+  fillSelectors();
   renderObjectives();
 });
 $("#mission").addEventListener("change", () => {
@@ -323,11 +343,18 @@ function status(t) {
 
 function updateTutorPersona() {
   const isZh = lang() === "zh";
-  $("#avatarIcon").textContent = isZh ? "👩🏻" : "🧑🏼";
-  $("#tutorName").textContent = isZh ? "Mei (美) · Tutora de Chino" : "Alex · Tutor de Inglés";
+  const avatarEl = $("#avatarIcon");
+  if (avatarEl) {
+    if (isZh) {
+      avatarEl.innerHTML = `👩🏻`;
+    } else {
+      avatarEl.innerHTML = `<img id="avatarImg" src="/wetty.jpg" alt="Wetty · Tutora de Inglés" class="tutor-avatar-img">`;
+    }
+  }
+  $("#tutorName").textContent = isZh ? "Mei (美) · Tutora de Chino" : "Wetty · Tutora de Inglés";
   $("#tutorRole").textContent = isZh
     ? "Practica pronunciación tonal y conversación guiada en mandarín."
-    : "Mejora tu fluidez y vocabulario con conversación natural.";
+    : "Conversación guiada por competencias para fluidez inmediata y confianza.";
 }
 
 // Idioma activo para el micrófono: por defecto el de estudio, con posibilidad de alternar a español
@@ -521,7 +548,7 @@ async function sendUserTurn(rawText, sttDurationMs = 0) {
 
 // Envío del turno a Gemini (Backend) con medición precisa de latencia
 async function sendTurnToTutor(userText, sttDurationMs = 0) {
-  status("Alex está pensando…");
+  status("Wetty está pensando…");
   $("#avatarIcon").classList.add("speaking");
 
   // Si tarda más de 3s, informar al usuario que el servidor o modelo está despertando
@@ -653,10 +680,13 @@ function speakVoice(text) {
   if (voices && voices.length > 0) {
     const langPrefix = targetLang === "zh" ? "zh" : "en";
     const candidates = voices.filter((v) => v.lang && v.lang.toLowerCase().replace("_", "-").startsWith(langPrefix));
-    const premiumVoice = candidates.find((v) => /natural|premium|online|google|david|zira|george|samantha|karen|tingting/i.test(v.name)) || candidates[0];
-    if (premiumVoice) {
-      ut.voice = premiumVoice;
-      ut.lang = premiumVoice.lang;
+    // Para Wetty (Inglés), priorizar voz femenina nativa clara y amigable
+    const femaleVoice = candidates.find((v) => /zira|jenny|aria|samantha|karen|victoria|susan|cathy|female|woman/i.test(v.name))
+      || candidates.find((v) => /natural|premium|online|google/i.test(v.name) && !/david|george|mark|guy|male/i.test(v.name))
+      || candidates[0];
+    if (femaleVoice) {
+      ut.voice = femaleVoice;
+      ut.lang = femaleVoice.lang;
     }
   }
 
@@ -693,6 +723,8 @@ function speakVoice(text) {
   }
 }
 
+let lessonModalShown = false;
+
 function checkMissionProgress(userText, completedIndices = []) {
   const m = getAdaptedMission();
   if (!m || !m.objectives || !m.objectives.length) return;
@@ -726,6 +758,14 @@ function checkMissionProgress(userText, completedIndices = []) {
       post("/api/tool", { name: "mission_progress", args: { objective_index: idx }, lang: lang(), mission: m.id, done: [...done] }).then((r) => applyFx(r.fx)).catch(() => {});
     }
   });
+
+  // Si todos los objetivos de la lección fueron logrados, celebrar y abrir modal de calificación
+  if (done.size >= m.objectives.length && !lessonModalShown) {
+    lessonModalShown = true;
+    setTimeout(() => {
+      showLessonCompleteModal(m);
+    }, 700);
+  }
 }
 
 function applyFx(fx) {
@@ -738,6 +778,7 @@ function applyFx(fx) {
 async function connect() {
   if ($("#connect")) $("#connect").disabled = true;
   done.clear();
+  lessonModalShown = false;
   renderObjectives();
   if ($("#chat")) $("#chat").replaceChildren();
   status("Conectando con el tutor…");
@@ -828,6 +869,127 @@ $("#toggleObjsBtn")?.addEventListener("click", () => {
   const drawer = $("#objsDrawer");
   if (drawer) drawer.classList.toggle("collapsed");
 });
+
+// ---------------------------------------------------------------- Modal y Progresión Curricular
+function showLessonCompleteModal(m) {
+  const modal = $("#lessonCompleteModal");
+  if (!modal) return;
+
+  const totalObjs = m?.objectives?.length || 1;
+  const completedObjs = done.size;
+  const comp = S?.competencies || { grammar: 75, vocabulary: 80, fluency: 70, comprehension: 85 };
+
+  // Cálculo de calificación pedagógica de 0 a 100
+  const objScore = Math.min(60, Math.round((completedObjs / totalObjs) * 60));
+  const compAvg = Math.round(((comp.grammar || 70) + (comp.vocabulary || 70) + (comp.fluency || 70) + (comp.comprehension || 70)) / 4);
+  const totalScore = Math.min(100, Math.max(65, objScore + Math.round(compAvg * 0.4)));
+
+  const numEl = $("#lessonScoreNum");
+  if (numEl) numEl.textContent = totalScore;
+
+  let stars = "⭐⭐⭐";
+  let verdict = "¡Dominio sobresaliente del nivel!";
+  if (totalScore < 75) {
+    stars = "⭐";
+    verdict = "¡Buen esfuerzo! Continúa practicando para afianzar el vocabulario.";
+  } else if (totalScore < 90) {
+    stars = "⭐⭐";
+    verdict = "¡Muy buen desempeño! Comunicación clara y efectiva.";
+  }
+
+  const starsEl = $("#lessonStars");
+  if (starsEl) starsEl.textContent = stars;
+  const verdictEl = $("#lessonVerdict");
+  if (verdictEl) verdictEl.textContent = verdict;
+  const titleEl = $("#lessonModalTitle");
+  if (titleEl) titleEl.textContent = `¡Lección: ${m?.title || "Completada"}!`;
+  const subEl = $("#lessonModalSubtitle");
+  if (subEl) subEl.textContent = `Has alcanzado ${completedObjs} de ${totalObjs} objetivos pedagógicos.`;
+
+  // Actualizar barras de competencias
+  const setCompBar = (meterId, valId, val) => {
+    const meter = $(meterId);
+    const label = $(valId);
+    const scoreVal = Math.min(100, Math.max(20, Math.round(val || 75)));
+    if (meter) meter.style.width = `${scoreVal}%`;
+    if (label) label.textContent = `${scoreVal}%`;
+  };
+
+  setCompBar("#compMeterCompr", "#compValCompr", comp.comprehension);
+  setCompBar("#compMeterFluency", "#compValFluency", comp.fluency);
+  setCompBar("#compMeterGrammar", "#compValGrammar", comp.grammar);
+  setCompBar("#compMeterVocab", "#compValVocab", comp.vocabulary);
+
+  modal.hidden = false;
+  toast("🎉 ¡Objetivos de la lección alcanzados! +35 XP");
+  awardXP(35);
+}
+
+function closeLessonCompleteModal() {
+  const modal = $("#lessonCompleteModal");
+  if (modal) modal.hidden = true;
+}
+
+function advanceToNextLesson() {
+  closeLessonCompleteModal();
+  const missionSel = $("#mission");
+  if (!missionSel) return;
+
+  const currentIdx = missionSel.selectedIndex;
+  if (currentIdx >= 0 && currentIdx < missionSel.options.length - 1) {
+    missionSel.selectedIndex = currentIdx + 1;
+    missionSel.dispatchEvent(new Event("change"));
+    toast(`🚀 Iniciando ${missionSel.options[currentIdx + 1].text}`);
+    setTimeout(() => {
+      connect();
+    }, 400);
+  } else {
+    // Si era la última lección del nivel, avanzar al siguiente nivel CEFR
+    const levelSel = $("#level");
+    const currentLvIdx = levelSel.selectedIndex;
+    if (currentLvIdx >= 0 && currentLvIdx < levelSel.options.length - 1) {
+      levelSel.selectedIndex = currentLvIdx + 1;
+      levelSel.dispatchEvent(new Event("change"));
+      toast(`🎓 ¡Felicidades! Avanzas al nivel ${levelSel.value}`);
+      setTimeout(() => {
+        connect();
+      }, 500);
+    } else {
+      toast("🏆 ¡Has completado todas las lecciones del plan curricular!");
+      setTimeout(() => {
+        connect();
+      }, 400);
+    }
+  }
+}
+
+function repeatCurrentLesson() {
+  closeLessonCompleteModal();
+  done.clear();
+  renderObjectives();
+  toast("🔄 Reiniciando práctica de la lección");
+  setTimeout(() => {
+    connect();
+  }, 300);
+}
+
+function awardXP(amount) {
+  post("/api/turn", {}).then((r) => {
+    if (r.xp && S) {
+      S.xp = r.xp.xp;
+      S.level = r.xp.level;
+      paint();
+    }
+  }).catch(() => {});
+}
+
+$("#finishLessonManualBtn")?.addEventListener("click", () => {
+  const m = getAdaptedMission();
+  showLessonCompleteModal(m);
+});
+$("#closeLessonModal")?.addEventListener("click", closeLessonCompleteModal);
+$("#repeatLessonBtn")?.addEventListener("click", repeatCurrentLesson);
+$("#nextLessonBtn")?.addEventListener("click", advanceToNextLesson);
 
 // ---------------------------------------------------------------- tonos
 const BUILTIN = [

@@ -34,14 +34,14 @@ test("LEVEL_RULES define restricciones estrictas para A1", () => {
   assert.match(r.promptDirective, /PRINCIPIANTE A1/);
 });
 
-test("buildPedagogicalSystemInstruction incorpora reglas de nivel y doble rol", () => {
+test("buildPedagogicalSystemInstruction incorpora reglas de nivel y doble rol para Wetty", () => {
   const instr = buildPedagogicalSystemInstruction({
     lang: "en",
     level: "A1",
     mission: { id: "cliente", title: "Reunión con cliente", scene: "x", objectives: [] },
   });
 
-  assert.match(instr, /Alex/);
+  assert.match(instr, /Wetty/i);
   assert.match(instr, /A1/);
   assert.match(instr, /FACILITADOR PEDAGÓGICO/);
   assert.match(instr, /TECHO LÉXICO/);
@@ -163,4 +163,14 @@ test("repairAndGuaranteePedagogicalResponse preserva completedObjectives", () =>
   };
   const res = repairAndGuaranteePedagogicalResponse(withObjectives, "", "I want a coffee, please", "A1", "en");
   assert.deepEqual(res.completedObjectives, [0, 1]);
+});
+
+test("LESSON_CURRICULUM define una secuencia pedagógica progresiva por niveles", async () => {
+  const { LESSON_CURRICULUM } = await import("../lib/pedagogicalAgent.js");
+  assert.ok(LESSON_CURRICULUM.en, "Debe tener currículum para inglés");
+  assert.ok(LESSON_CURRICULUM.en.A1.length >= 4, "A1 debe tener al menos 4 lecciones progresivas");
+  assert.equal(LESSON_CURRICULUM.en.A1[0].order, 1);
+  assert.ok(LESSON_CURRICULUM.en.A1[0].module, "Debe pertenecer a un módulo pedagógico");
+  assert.ok(LESSON_CURRICULUM.en.A1[1].order > LESSON_CURRICULUM.en.A1[0].order);
+  assert.ok(LESSON_CURRICULUM.en.B1.length >= 4, "B1 debe tener lecciones definidas");
 });

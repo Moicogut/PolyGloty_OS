@@ -368,13 +368,23 @@ main {
   width: 70px;
   height: 70px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #4f46e5, #06b6d4);
+  background: #182332;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 32px;
   box-shadow: var(--shadow-glow);
   flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid var(--secondary);
+}
+
+.tutor-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius-full);
 }
 
 .tutor-avatar.speaking {
@@ -1654,31 +1664,44 @@ button.danger:hover:not(:disabled) {
   flex-shrink: 0;
 }
 
-/* Dock Inferior Unificado de Conversación */
+/* Dock Inferior Unificado de Conversación (Espacioso, Limpio y No Saturado) */
 .conversation-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
+  margin-bottom: 12px;
+}
+
+.dock-toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  padding: 6px 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 .dock-pill-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  padding: 6px 10px;
+  padding: 5px 12px;
   font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.dock-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
 }
 
 .dock-pill-btn.active {
@@ -1687,14 +1710,40 @@ button.danger:hover:not(:disabled) {
   color: var(--secondary);
 }
 
+.dock-pill-finish {
+  margin-left: auto;
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+  font-weight: 600;
+}
+
+.dock-pill-finish:hover {
+  background: rgba(99, 102, 241, 0.28);
+}
+
+.dock-main-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
 .dock-input-wrap {
   flex: 1;
   display: flex;
   align-items: center;
   background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  padding: 2px 8px 2px 14px;
+  padding: 4px 8px 4px 16px;
   min-width: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dock-input-wrap:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
 }
 
 .dock-input-wrap input {
@@ -1702,28 +1751,36 @@ button.danger:hover:not(:disabled) {
   background: transparent;
   border: none;
   color: var(--text-main);
-  font-size: 14px;
-  padding: 8px 0;
+  font-size: 16px; /* 16px exacto para legibilidad amplia y evitar zoom automático en Safari iOS */
+  padding: 10px 0;
   outline: none;
-  min-width: 60px;
+  min-width: 0;
+  line-height: 1.4;
 }
 
 .dock-send-btn {
   background: var(--primary);
   color: white;
   border: none;
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  font-size: 15px;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.dock-send-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: scale(1.06);
 }
 
 .dock-send-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
@@ -1984,19 +2041,47 @@ button.danger:hover:not(:disabled) {
   }
 
   .conversation-dock {
-    padding: 6px 8px;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .dock-toolbar {
     gap: 6px;
+    justify-content: flex-start;
+  }
+
+  .dock-pill-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .dock-pill-finish {
+    margin-left: auto;
+  }
+
+  .dock-main-row {
+    gap: 8px;
+  }
+
+  .dock-input-wrap {
+    padding: 2px 6px 2px 12px;
+  }
+
+  .dock-input-wrap input {
+    font-size: 16px; /* Evita auto-zoom en iOS Safari y se lee amplio */
+    padding: 8px 0;
+  }
+
+  .dock-send-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
   }
 
   .main-voice-btn {
     width: 44px;
     height: 44px;
     font-size: 18px;
-  }
-
-  .dock-pill-btn {
-    padding: 5px 8px;
-    font-size: 11px;
   }
 
   .chat-footer-stats {
@@ -2011,5 +2096,138 @@ button.danger:hover:not(:disabled) {
   .grades {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .comp-meter-row .bar {
+    display: block !important; /* Asegurar que la barra de progreso sea visible dentro del modal de lección en móviles */
+  }
+}
+
+/* --- Estilos del Modal de Lección Completada y Progresión Pedagógica --- */
+.lesson-modal-card {
+  max-width: 420px;
+  width: 92%;
+  padding: 22px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+}
+
+.lesson-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.lesson-trophy-badge {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.lesson-score-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(6, 182, 212, 0.12));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.lesson-score-bubble {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.lesson-score-num {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--secondary);
+  line-height: 1;
+}
+
+.lesson-score-denom {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.lesson-stars {
+  font-size: 24px;
+  letter-spacing: 4px;
+  margin: 6px 0;
+}
+
+.lesson-verdict-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #86efac;
+  margin: 0;
+}
+
+.lesson-competencies-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.lesson-comp-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.comp-meter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  margin-bottom: 8px;
+}
+
+.comp-meter-row span {
+  width: 90px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.comp-meter-row .bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  display: block;
+}
+
+.comp-meter-row .bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: var(--radius-full);
+  transition: width 0.6s ease;
+}
+
+.comp-meter-row b {
+  width: 32px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+.lesson-modal-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 

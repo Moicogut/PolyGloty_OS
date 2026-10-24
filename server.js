@@ -15,6 +15,7 @@ import {
   GEMINI_PEDAGOGICAL_SCHEMA,
   repairAndGuaranteePedagogicalResponse,
   MISSION_CATALOG,
+  LESSON_CURRICULUM,
 } from "./lib/pedagogicalAgent.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -70,7 +71,17 @@ const resolveTenantStore = (req, url) => {
   return repo.getStore(fromHeader || fromQuery || "default");
 };
 const PUB = path.join(ROOT, "public");
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".json": "application/json" };
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".json": "application/json",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+};
 
 const send = (res, code, body, type = "application/json", extraHeaders = {}) => {
   res.writeHead(code, { "Content-Type": type, "Cache-Control": "no-store", ...extraHeaders });
@@ -104,6 +115,7 @@ const routes = {
       ...snapshot(state, lang(url.searchParams.get("lang"))),
       missions: MISSIONS,
       missionsCatalog: MISSION_CATALOG,
+      curriculum: LESSON_CURRICULUM,
       langs: LANGS,
       model: PROVIDER === "gemini" ? GEMINI_MODEL : MODEL,
       provider: PROVIDER,
