@@ -533,3 +533,58 @@ Se implementó el módulo de auditoría de suficiencia lingüística para medir 
 3. **Generación Vectorizada de Certificados PDF**: Descarga directa de diplomas con firma SHA-256 y código QR sin requerir impresión de navegador.
 4. **Modo PWA Offline con IndexedDB**: Almacenamiento local seguro de tarjetas SRS y árbol curricular para práctica sin conexión.
 
+---
+
+## 23. Fase II - Sprint 2.1: Salas de Microgrupos Social Co-Op y Motor Acústico Algorítmico GOP
+
+### 23.1 Esquema Relacional y Persistencia Multi-Tenant (`supabase/migrations/005_coop_microgroups.sql`)
+- Creada tabla `public.coop_rooms`:
+  - `room_code` único legible (ej. `TECH-4A12`), `max_capacity` (2 a 6 personas), `level_cefr`, `professional_domain` (`tech`, `medical`, `corporate`, `general`), `status` (`waiting`, `active`, `finished`), `target_task` en JSONB.
+- Creada tabla `public.coop_memberships`:
+  - Relación `room_id` y `user_id`, roles `host` / `member`, métricas de `talking_time_seconds`, `turn_count` y `peer_feedback_score`.
+- Creada tabla `public.coop_sessions_log`:
+  - Auditoría de sesión con `transcript_json`, `task_goals_achieved`, `duration_seconds` y `facilitator_summary`.
+- RLS Habilitado al 100%: Aislamiento estricto por `user_id = auth.uid()` y verificación de pertenencia a la sala.
+- Integrado método `recordCoopSessionLog` en `lib/supabase.js`.
+
+### 23.2 Motor de Smart Matching y Orquestación TBLT (`lib/coopEngine.js`)
+- **Afinidad Tridimensional**: Agrupación automática basada en:
+  1. Nivel CEFR idéntico (evita asimetría pedagógica entre participantes).
+  2. Dominio profesional común con fallback inteligente a general.
+  3. Ventana ágil de 15 minutos (900 segundos).
+- **Balanceo Dinámico de Talking Time**:
+  - Trazabilidad en tiempo real del tiempo acumulado y porcentaje de intervención.
+  - Detección de miembros con participación rezagada ($< 50\%$ de la media).
+  - Sugerencia proactiva del próximo interlocutor para mantener la equidad comunicativa.
+- **Detección de Silencios Prolongados ($>5$s)**:
+  - Disparador no punitivo que genera un guion cálido de intervención para Wetty.
+- **Catálogo de Misiones TBLT**:
+  - Tech: Daily Standup, Bug Triage, Architecture Review, Post-Mortem.
+  - Medical: Patient Check-in, Shift Handoff, Case Conference, Informed Consent.
+  - Corporate: Kickoff Introductions, Pipeline Review, Budget Negotiation, Partnership Pitch.
+  - General: Travelers Meetup, Weekend Plan, Cultural Exchange, Smart Cities Debate.
+
+### 23.3 Motor Acústico Algorítmico GOP y Formantes (`lib/acousticGopEngine.js`)
+- **Algoritmo Goodness of Pronunciation (GOP)**:
+  - Implementación de la verosimilitud logarítmica de emisión frente a formantes estándar en escala psicoacústica de Bark.
+  - Puntuación 0 a 100 con umbral nativo calibrado en $\ge 75$.
+- **Diagnóstico Quirúrgico de los 3 Dolores del Hispanohablante**:
+  1. *Colapso Laxa/Tensa (/ɪ/ vs /iː/ en sheep/ship)*: Detección si F1 $< 340$ Hz y F2 $> 2080$ Hz al emitir laxa /ɪ/, activando guía de mandíbula relajada.
+  2. *Omisión de Schwa (/ə/ en about, problem)*: Detección de sobre-articulación periférica (F1 $> 630$ Hz o F2 fuera de rango central), recomendando suspiro neutro.
+  3. *Epéntesis Consonántica (/e/ protésica en sport, student)*: Detección de energía vocalica previa a la fricativa /s/, guiando hacia el siseo directo sin prefijo.
+- **Extracción de Formantes F1/F2**: Extracción analítica de picos de resonancia en 16 kHz PCM sin dependencias externas.
+- **Guía Articulatoria y Recasting**: Devolución de apertura mandibular (F1), posición lingual (F2), tip anatómico y propuesta de reformulación implícita para Wetty.
+
+### 23.4 Endpoints REST Multi-Tenant (`server.js` y `lib/validator.js`)
+- `POST /api/coop/match`: Emparejamiento por afinidad y gestión de membresías en microgrupos.
+- `POST /api/coop/turn`: Registro de intervenciones, Talking Time y facilitación.
+- `GET /api/coop/silence-check`: Monitor de silencios con scripts para Wetty.
+- `POST /api/coop/leave`: Salida limpia de sala con traspaso de host o purga.
+- `POST /api/acoustic/gop-score`: Análisis fonético instantáneo con coordenadas F1/F2 y guía anatómica.
+
+### 23.5 Resultados y Verificación (DoD)
+- **Suite de Pruebas**: `test/coop_gop.test.js` (**13/13 tests pasando al 100%**).
+- **Suite Completa del Proyecto**: `npm test` (**86 tests ejecutados, 85 pasando, 0 fallos, 1 omitido por RLS remoto**).
+- **Latencia conversacional**: Mantenida en 1474 ms promedio y P90 de 1655 ms.
+
+

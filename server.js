@@ -19,6 +19,9 @@ import {
   validateWrittenSubmissionPayload,
   validateOralTurnPayload,
   validateProficiencyFinalizePayload,
+  validateCoopMatchPayload,
+  validateCoopTurnPayload,
+  validateAcousticGopPayload,
   ValidationError,
 } from "./lib/validator.js";
 import { logger } from "./lib/logger.js";
@@ -34,6 +37,18 @@ import {
   finalizeProficiencyAudit,
   verifyCertificate,
 } from "./lib/proficiencyAuditor.js";
+import {
+  matchOrCreateRoom,
+  recordCoopTurn,
+  checkCoopSilence,
+  leaveCoopRoom,
+  coopMemoryStore,
+} from "./lib/coopEngine.js";
+import {
+  evaluateGopScore,
+  extractFormantsFromPcm,
+  CANONICAL_FORMANTS,
+} from "./lib/acousticGopEngine.js";
 
 import {
   buildPedagogicalSystemInstruction,
@@ -350,6 +365,92 @@ const routes = {
       send(res, 400, { error: err.message || "Error al verificar el certificado" });
     }
   },
+
+  "POST /api/coop/match": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateCoopMatchPayload(b);
+      const state = resolveTenantStore(req, url);
+      const matchResult = matchOrCreateRoom({
+        userId: state.tenantId,
+        candidateName: payload.candidateName,
+        level: payload.level,
+        domain: payload.domain,
+        maxCapacity: payload.maxCapacity,
+      });
+      logger.info("coop_room_matched", {
+        tenantId: state.tenantId,
+        roomId: matchResult.room.id,
+        isNewRoom: matchResult.isNewRoom,
+        domain: payload.domain,
+        level: payload.level,
+      });
+      send(res, 200, matchResult);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al emparejar en sala Co-Op" });
+    }
+  },
+
+  "POST /api/coop/turn": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateCoopTurnPayload(b);
+      const state = resolveTenantStore(req, url);
+      const turnResult = recordCoopTurn({
+        roomId: payload.roomId,
+        userId: state.tenantId,
+        audioDurationSeconds: payload.audioDurationSeconds,
+        transcriptText: payload.transcriptText,
+        gopScore: payload.gopScore,
+      });
+      send(res, 200, turnResult);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al registrar turno en sala Co-Op" });
+    }
+  },
+
+  "GET /api/coop/silence-check": (req, res, url) => {
+    try {
+      const roomId = url.searchParams.get("roomId");
+      if (!roomId) return send(res, 400, { error: "El parámetro roomId es obligatorio" });
+      const silenceResult = checkCoopSilence(roomId);
+      send(res, 200, silenceResult);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al verificar silencio en sala" });
+    }
+  },
+
+  "POST /api/coop/leave": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const roomId = typeof b.roomId === "string" ? b.roomId.trim() : "";
+      if (!roomId) return send(res, 400, { error: "El campo 'roomId' es obligatorio" });
+      const state = resolveTenantStore(req, url);
+      const result = leaveCoopRoom(roomId, state.tenantId);
+      send(res, 200, result);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al abandonar sala Co-Op" });
+    }
+  },
+
+  "POST /api/acoustic/gop-score": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateAcousticGopPayload(b);
+      const state = resolveTenantStore(req, url);
+      const gopResult = evaluateGopScore(payload);
+      logger.info("acoustic_gop_evaluated", {
+        tenantId: state.tenantId,
+        word: payload.word,
+        gopScore: gopResult.gopScore,
+        painType: gopResult.painType,
+      });
+      send(res, 200, gopResult);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al calcular el score GOP" });
+    }
+  },
+
 
 
   "POST /api/auth/register": async (req, res, url) => {
@@ -852,4 +953,6 @@ if (process.env.NODE_ENV !== "test" && !process.env.TEST_MODE) {
     if (!process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY) console.log("Aviso: sin API keys solo funcionan los tonos y el repaso.");
   });
 }
+
+
 
