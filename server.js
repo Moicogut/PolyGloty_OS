@@ -233,6 +233,16 @@ const routes = {
         totalLevelCredits: result.totalLevelCredits,
       });
       send(res, 200, result);
+      // Sincronización asíncrona y segura con Supabase Cloud (tabla public.user_credits)
+      supabase.recordLessonCredit({
+        userId: state.tenantId,
+        lang: payload.lang,
+        level: payload.level,
+        moduleId: payload.moduleId,
+        lessonId: payload.lessonId,
+        score: payload.score,
+        creditsEarned: result.creditsAwarded,
+      }).catch((err) => logger.warn("supabase_user_credits_sync_failed", { error: err.message }, state.tenantId));
     } catch (err) {
       send(res, 400, { error: err.message || "Error al acreditar la lección curricular" });
     }
@@ -320,6 +330,11 @@ const routes = {
         certificateCode: result.certificate?.code || null,
       });
       send(res, 200, result);
+      // Sincronización asíncrona y segura con Supabase Cloud (tabla public.proficiency_audits)
+      if (result.audit) {
+        supabase.recordProficiencyAudit(result.audit)
+          .catch((err) => logger.warn("supabase_proficiency_audit_sync_failed", { error: err.message }, state.tenantId));
+      }
     } catch (err) {
       send(res, 400, { error: err.message || "Error al consolidar la prueba de suficiencia" });
     }
