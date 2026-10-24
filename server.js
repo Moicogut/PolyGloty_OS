@@ -12,12 +12,16 @@ import {
   validateChatPayload,
   validateWarmupGeneratePayload,
   validateWarmupCompletePayload,
+  validateCurriculumCompletePayload,
+  validateHandbookQuery,
   ValidationError,
 } from "./lib/validator.js";
 import { logger } from "./lib/logger.js";
 import { RateLimiter, UserUsageLimiter } from "./lib/limiter.js";
 import { SupabaseAdapter } from "./lib/supabase.js";
 import { getStudentHubStatus, generateWarmup, completeWarmup } from "./lib/hubService.js";
+import { getCurriculumTreeStatus, getHandbookChapter, awardLessonCredits } from "./lib/curriculumData.js";
+
 import {
   buildPedagogicalSystemInstruction,
   adaptMissionForLevel,
@@ -180,6 +184,47 @@ const routes = {
       send(res, 400, { error: err.message || "Error al registrar la culminación del calentamiento" });
     }
   },
+
+  "GET /api/curriculum/tree": (req, res, url) => {
+    try {
+      const state = resolveTenantStore(req, url);
+      const targetLang = lang(url.searchParams.get("lang"));
+      const targetLevel = url.searchParams.get("level") || null;
+      const tree = getCurriculumTreeStatus({ state, lang: targetLang, level: targetLevel });
+      send(res, 200, { ok: true, ...tree });
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al obtener la estructura curricular" });
+    }
+  },
+
+  "GET /api/curriculum/handbook": (req, res, url) => {
+    try {
+      const q = validateHandbookQuery(Object.fromEntries(url.searchParams));
+      const chapter = getHandbookChapter(q.lang, q.level, q.lessonId);
+      send(res, 200, { ok: true, chapter });
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al obtener la guía del Handbook" });
+    }
+  },
+
+  "POST /api/curriculum/complete-lesson": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateCurriculumCompletePayload(b);
+      const state = resolveTenantStore(req, url);
+      const result = awardLessonCredits({ state, ...payload });
+      logger.info("lesson_credits_awarded", {
+        tenantId: state.tenantId,
+        lessonId: payload.lessonId,
+        creditsAwarded: result.creditsAwarded,
+        totalLevelCredits: result.totalLevelCredits,
+      });
+      send(res, 200, result);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al acreditar la lección curricular" });
+    }
+  },
+
 
   "POST /api/auth/register": async (req, res, url) => {
     try {

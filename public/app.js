@@ -43,8 +43,10 @@ const api = async (p, opt = {}) => {
   return j ?? t;
 };
 const post = (p, b) => api(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b ?? {}) });
+const get = (p) => api(p);
 const toast = (t) => { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2800); };
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
 
 let S = null;
 const lang = () => $("#lang").value;
@@ -920,10 +922,40 @@ function showLessonCompleteModal(m) {
   setCompBar("#compMeterGrammar", "#compValGrammar", comp.grammar);
   setCompBar("#compMeterVocab", "#compValVocab", comp.vocabulary);
 
+  // Acreditación oficial curricular de 2 créditos
+  const currentMission = m?.id || $("#mission")?.value || "cafe";
+  const currentLv = $("#level")?.value || "A1";
+
+  post("/api/curriculum/complete-lesson", {
+    lang: lang(),
+    level: currentLv,
+    moduleId: "m1",
+    lessonId: currentMission,
+    score: totalScore,
+    completedObjectives: completedObjs,
+  }).then((res) => {
+    if (res && res.ok) {
+      const accumEl = $("#lessonCreditsAccum");
+      if (accumEl) {
+        accumEl.textContent = `Total en Nivel: ${res.totalLevelCredits} / ${res.targetCredits} créditos`;
+      }
+      if (res.proficiencyUnlocked) {
+        toast("🎓 ¡Examen de Suficiencia Desbloqueado! Has alcanzado 36 créditos.");
+      }
+      if (S) {
+        S.profile = S.profile || {};
+        S.profile.credits = res.totalLevelCredits;
+      }
+    }
+  }).catch((e) => {
+    console.warn("Error al acreditar lección:", e);
+  });
+
   modal.hidden = false;
   toast("🎉 ¡Objetivos de la lección alcanzados! +35 XP");
   awardXP(35);
 }
+
 
 function closeLessonCompleteModal() {
   const modal = $("#lessonCompleteModal");
@@ -1392,6 +1424,10 @@ async function loadAndRenderHub() {
       if (startBtn) {
         startBtn.onclick = () => startWarmupForLesson(nextL.id);
       }
+      const handbookBtn = $("#hubOpenHandbookBtn");
+      if (handbookBtn) {
+        handbookBtn.onclick = () => openHandbookModal(nextL.id);
+      }
     }
 
     // Retos del día y la semana
@@ -1413,9 +1449,212 @@ async function loadAndRenderHub() {
         challengesList.appendChild(row);
       });
     }
+
+    // Renderizar Árbol Curricular Modular (36 créditos)
+    await loadAndRenderCurriculumTree();
   } catch (err) {
     console.error("Error al cargar estado del Hub:", err);
   }
+}
+
+// ---------------------------------------------------------------- Árbol Curricular Modular
+async function loadAndRenderCurriculumTree() {
+  const container = $("#hubCurriculumTree");
+  if (!container) return;
+
+  try {
+    const res = await get(`/api/curriculum/tree?lang=${lang()}&level=${$("#level")?.value || "A1"}`);
+    if (!res || !res.ok || !Array.isArray(res.modules)) return;
+
+    container.innerHTML = "";
+    res.modules.forEach((mod) => {
+      const card = el("div", "module-card");
+
+      const header = el("div", "module-header");
+      header.innerHTML = `
+        <div class="module-title-wrap">
+          <div class="module-title-text">
+            <span>${mod.title}</span>
+            <span class="module-credits-pill">${mod.earnedCredits} / ${mod.targetCredits} créditos</span>
+          </div>
+          <div class="module-desc">${mod.description}</div>
+        </div>
+        <div class="module-progress-box">
+          <div class="module-progress-bar">
+            <div class="module-progress-fill" style="width: ${mod.progressPercent}%;"></div>
+          </div>
+          <b style="font-size: 12px; color: #a5b4fc;">${mod.progressPercent}%</b>
+        </div>
+      `;
+
+      const lessonsList = el("div", "module-lessons-list");
+      mod.lessons.forEach((l) => {
+        const item = el("div", `curriculum-lesson-item ${l.isCompleted ? "completed" : "active"}`);
+        item.innerHTML = `
+          <div class="lesson-left-col">
+            <div class="lesson-status-icon">${l.isCompleted ? "✔" : "⚡"}</div>
+            <div class="lesson-text-meta">
+              <div class="lesson-name-row">${l.title}</div>
+              <div class="lesson-sub-meta">
+                <span>${l.credits} Créditos</span>
+                ${l.isCompleted ? `<span style="color: #34d399;">Superada (${l.score} pts)</span>` : `<span class="muted">Disponible</span>`}
+              </div>
+            </div>
+          </div>
+          <div class="lesson-actions-group">
+            <button type="button" class="lesson-guide-btn" data-lesson-id="${l.id}">📖 Guía</button>
+            <button type="button" class="primary lesson-play-btn" data-lesson-id="${l.id}">Practicar</button>
+          </div>
+        `;
+
+        item.querySelector(".lesson-guide-btn")?.addEventListener("click", () => {
+          openHandbookModal(l.id);
+        });
+
+        item.querySelector(".lesson-play-btn")?.addEventListener("click", () => {
+          startWarmupForLesson(l.id);
+        });
+
+        lessonsList.appendChild(item);
+      });
+
+      card.append(header, lessonsList);
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.warn("Error al renderizar árbol curricular:", err);
+  }
+}
+
+// ---------------------------------------------------------------- Polyglot Curriculum Handbook
+let currentHandbookLessonId = "cafe";
+
+async function openHandbookModal(lessonId) {
+  const modal = $("#handbookModal");
+  if (!modal) return;
+  currentHandbookLessonId = lessonId || "cafe";
+
+  try {
+    const res = await get(`/api/curriculum/handbook?lang=${lang()}&level=${$("#level")?.value || "A1"}&lessonId=${currentHandbookLessonId}`);
+    if (!res || !res.ok || !res.chapter) throw new Error("No se pudo cargar la guía del handbook");
+    const ch = res.chapter;
+
+    if ($("#handbookCodeBadge")) $("#handbookCodeBadge").textContent = ch.code;
+    if ($("#handbookLessonTitle")) $("#handbookLessonTitle").textContent = ch.title;
+    if ($("#handbookModuleTitle")) $("#handbookModuleTitle").textContent = ch.moduleTitle;
+
+    // 1. Can-Do
+    const canDoList = $("#handbookCanDoList");
+    if (canDoList && Array.isArray(ch.canDoDescriptors)) {
+      canDoList.innerHTML = "";
+      ch.canDoDescriptors.forEach((desc) => {
+        const li = el("li", "", desc);
+        canDoList.appendChild(li);
+      });
+    }
+
+    // 2. Gramática
+    const formEl = $("#handbookGrammarFormula");
+    if (formEl) formEl.textContent = ch.grammarCorpus?.formula || "Fórmula canónica no especificada";
+    const sumEl = $("#handbookGrammarSummary");
+    if (sumEl) sumEl.textContent = ch.grammarCorpus?.summary || "";
+
+    const contrastTable = $("#handbookContrastTable");
+    if (contrastTable && Array.isArray(ch.grammarCorpus?.contrast)) {
+      contrastTable.innerHTML = "";
+      ch.grammarCorpus.contrast.forEach((c) => {
+        const div = el("div", "contrast-item");
+        div.innerHTML = `
+          <div class="contrast-wrong">${c.mistake}</div>
+          <div class="contrast-right">${c.correct}</div>
+          <div class="contrast-why">${c.why}</div>
+        `;
+        contrastTable.appendChild(div);
+      });
+    }
+
+    // 3. Colocaciones & IPA
+    const colocGrid = $("#handbookCollocationsGrid");
+    if (colocGrid && Array.isArray(ch.collocations)) {
+      colocGrid.innerHTML = "";
+      ch.collocations.forEach((col) => {
+        const card = el("div", "collocation-card");
+        card.innerHTML = `
+          <div class="colloc-top-row">
+            <span class="colloc-phrase">${col.phrase}</span>
+            <span class="colloc-ipa">${col.ipa || ""}</span>
+          </div>
+          <div class="colloc-example">"${col.example || ""}"</div>
+          <button type="button" class="colloc-listen-btn">🔊 Escuchar</button>
+        `;
+        card.querySelector(".colloc-listen-btn")?.addEventListener("click", () => {
+          speakVoice(col.speak || col.phrase);
+        });
+        colocGrid.appendChild(card);
+      });
+    }
+
+    // 4. Diálogo Modelo
+    const dialContext = $("#handbookDialogueContext");
+    if (dialContext) dialContext.textContent = ch.dialogueModel?.context || "";
+    const dialTurns = $("#handbookDialogueTurns");
+    if (dialTurns && Array.isArray(ch.dialogueModel?.turns)) {
+      dialTurns.innerHTML = "";
+      ch.dialogueModel.turns.forEach((t) => {
+        const item = el("div", "dialogue-turn-item");
+        item.innerHTML = `
+          <div class="dialogue-turn-header">
+            <span class="dialogue-speaker">${t.speaker}</span>
+          </div>
+          <div class="dialogue-text">${t.text}</div>
+          ${t.note ? `<div class="dialogue-pragmatic-note">💡 ${t.note}</div>` : ""}
+        `;
+        dialTurns.appendChild(item);
+      });
+    }
+
+    // 5. Tareas
+    const tasksCard = $("#handbookTasksCard");
+    if (tasksCard && ch.tasks) {
+      tasksCard.innerHTML = `
+        <div class="task-step-box">
+          <div class="task-step-num">1</div>
+          <div><b>Pre-sesión Warm-up:</b> ${ch.tasks.warmup}</div>
+        </div>
+        <div class="task-step-box">
+          <div class="task-step-num">2</div>
+          <div><b>Sesión con Wetty:</b> ${ch.tasks.central}</div>
+        </div>
+        <div class="task-step-box">
+          <div class="task-step-num">3</div>
+          <div><b>Fijación en SRS:</b> ${ch.tasks.homework}</div>
+        </div>
+      `;
+    }
+
+    // Activar pestaña inicial Can-Do
+    switchHandbookTab("cando");
+
+    modal.hidden = false;
+  } catch (err) {
+    toast("Error al cargar la guía: " + err.message);
+  }
+}
+
+function switchHandbookTab(targetTab) {
+  document.querySelectorAll(".handbook-tab").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.htab === targetTab);
+  });
+  const panels = {
+    cando: $("#hpanel-cando"),
+    grammar: $("#hpanel-grammar"),
+    vocab: $("#hpanel-vocab"),
+    dialogue: $("#hpanel-dialogue"),
+    tasks: $("#hpanel-tasks"),
+  };
+  Object.entries(panels).forEach(([key, panel]) => {
+    if (panel) panel.hidden = (key !== targetTab);
+  });
 }
 
 async function startWarmupForLesson(lessonId) {
@@ -1423,6 +1662,7 @@ async function startWarmupForLesson(lessonId) {
   const modal = $("#warmupModal");
   if (!modal) return;
   modal.hidden = false;
+
 
   const challengeBody = $("#warmupChallengeBody");
   const completeView = $("#warmupCompleteView");
@@ -1849,8 +2089,34 @@ async function init() {
     }, 400);
   });
 
+  // Eventos del Modal de la Guía Oficial (Handbook)
+  $("#closeHandbookModal")?.addEventListener("click", () => {
+    const modal = $("#handbookModal");
+    if (modal) modal.hidden = true;
+  });
+
+  document.querySelectorAll(".handbook-tab").forEach((tabBtn) => {
+    tabBtn.addEventListener("click", () => {
+      if (tabBtn.dataset.htab) {
+        switchHandbookTab(tabBtn.dataset.htab);
+      }
+    });
+  });
+
+  $("#handbookStartWarmupBtn")?.addEventListener("click", () => {
+    const modal = $("#handbookModal");
+    if (modal) modal.hidden = true;
+    startWarmupForLesson(currentHandbookLessonId);
+  });
+
+  $("#hubRefreshTreeBtn")?.addEventListener("click", () => {
+    loadAndRenderCurriculumTree();
+    toast("🔄 Árbol curricular actualizado");
+  });
+
   // Eventos del Modal de Autenticación y Cuentas
   let authMode = "login"; // "login" | "register" | "recover"
+
 
   function updateAuthModalUI() {
     const loggedInView = $("#authLoggedInView");

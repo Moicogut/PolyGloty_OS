@@ -400,5 +400,52 @@ Se implementó y verificó de extremo a extremo la Fase 1 del Plan Maestro:
   - Grabación completa de la sesión: `fase1_hub_warmup_flow_1792855973283.webp`.
   - Capturas registradas: `landing_page_1792855984835.png`, `auth_modal_opened_1792855999507.png`, `student_hub_view_1792856054307.png`, `warmup_modal_opened_1792856159624.png`, `tutor_chat_view_1792856599392.png`.
 
+---
+
+## 20. Fase 2: Estructura Curricular por Créditos (36 Créditos/Nivel) & Polyglot Curriculum Handbook (Completada y Verificada)
+
+Se implementó la arquitectura curricular formal y el libro oficial canónico de estudio:
+
+### 20.1 Arquitectura Curricular y Equivalencia ECTS (`lib/curriculumData.js`)
+- **Estructura Modular de 36 Créditos**:
+  - Cada nivel (A1, A2, B1, B2, C1 para inglés y HSK 1, 2, 3 para mandarín) se compone de **36 créditos académicos**.
+  - Estructurado en **3 módulos temáticos de 12 créditos cada uno**.
+  - Cada módulo contiene **6 lecciones de 2 créditos cada una** (18 lecciones secuenciales por nivel).
+- **Acreditación de Lecciones (`awardLessonCredits`)**:
+  - Asignación de 2 créditos por lección completada con puntaje $\ge 70$.
+  - Idempotencia garantizada: una lección ya aprobada no duplica créditos, pero actualiza la mejor puntuación histórica del estudiante.
+  - Al acumular 36 créditos en el nivel, se desbloquea de forma automática la bandera `proficiencyUnlocked = true`, otorgando elegibilidad para el Examen de Certificación de Nivel.
+
+### 20.2 Polyglot Curriculum Handbook (Textbook Oficial Canónico)
+- Cada lección cuenta con un capítulo estructurado en **5 dimensiones canónicas**:
+  1. **Descriptores Can-Do (CEFR 2020)**: Metas conductuales explícitas y observables.
+  2. **Corpus Gramatical Canónico & Mediación Contrastiva**: Fórmulas funcionales y tablas de contraste español-idioma meta para erradicar errores fosilizados (ej. *"I want a coffee"* frente a *"Can I have a coffee, please?"*).
+  3. **Glosario de Colocaciones & Fonética IPA**: Expresiones con transcripción fonética internacional y síntesis de audio nativo integrable con un clic.
+  4. **Diálogo Modelo Anotado**: Intercambio nativo completo entre el interlocutor y el alumno con notas al margen sobre registro y pragmática.
+  5. **Ficha de Tareas de Salida**: Tarea previa (Warm-up Booster de 90s), tarea central (conversación en vivo con Wetty) y tarea posterior (fijación en mazo SRS).
+
+### 20.3 Contratos de API Multi-Tenant
+- `GET /api/curriculum/tree?lang=en&level=A1`: Devuelve el árbol jerárquico de módulos, lecciones y avance porcentual del usuario.
+- `GET /api/curriculum/handbook?lang=en&level=A1&lessonId=cafe`: Devuelve la ficha canónica del capítulo solicitado.
+- `POST /api/curriculum/complete-lesson`: Registra el cumplimiento pedagógico, suma +2 créditos en el Store multi-tenant y evalúa desbloqueo de suficiencia.
+
+### 20.4 Experiencia de Usuario en Frontend
+- **Student Hub (`#hubView`)**:
+  - Nueva sección `#hubCurriculumTree` que renderiza las tarjetas de los 3 módulos temáticos, barras de progreso de créditos (`X / 12 créditos`) y listas de lecciones con botón de apertura directa de la Guía Oficial (`📖 Guía`).
+  - Botón `[ 📖 Guía Oficial de Estudio ]` en la tarjeta de la Próxima Lección en Foco.
+- **Lector Modal del Handbook (`#handbookModal`)**:
+  - Interfaz de lectura editorial oscura, navegación por pestañas temáticas (Can-Do, Gramática, Colocaciones, Diálogo, Tareas) y botón de arranque de sesión rápida hacia el Warm-up Booster.
+- **Modal de Fin de Lección (`#lessonCompleteModal`)**:
+  - Incorporado el bloque `#lessonCreditsReward` mostrando los +2 créditos otorgados y el saldo acumulado en el nivel (`Total en Nivel: X / 36 créditos`).
+
+### 20.5 Evidencias de Verificación (DoD)
+- **Suite de Pruebas Automatizadas**:
+  - `test/curriculum.test.js`: 3 tests unitarios pasando al 100% (Verificación de 36 créditos/18 lecciones en A1, 5 dimensiones del Handbook, e idempotencia y desbloqueo de suficiencia a los 36 créditos).
+  - `npm test`: **68 tests ejecutados, 67 aprobados al 100%, 0 fallos, 1 omitido defensivamente**.
+- **Verificación Visual E2E en Navegador**:
+  - Verificación del árbol curricular y modal del Handbook grabada en video: `fase2_handbook_modal_verified_1792859020845.webp`.
+  - Capturas registradas: `curriculum_tree_verified_1792859068872.png`, `hub_overview_1792859107015.png`, `warmup_completed_1792859725105.png`.
+
+
 
 

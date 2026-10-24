@@ -219,6 +219,9 @@
           </p>
         </div>
         <div class="focus-card-action">
+          <button id="hubOpenHandbookBtn" type="button" class="dock-pill-btn" style="width: 100%; margin-bottom: 8px; justify-content: center;">
+            <span>📖 Guía Oficial de Estudio</span>
+          </button>
           <button id="hubStartLessonWarmupBtn" type="button" class="primary start-warmup-btn">
             <span>⚡ Iniciar Pre-sesión y Lección →</span>
           </button>
@@ -231,6 +234,22 @@
       <h3>🎯 Retos Pendientes</h3>
       <div class="challenges-list" id="hubChallengesList">
         <!-- Renderizado dinámico desde hubService -->
+      </div>
+    </div>
+
+    <!-- Árbol Curricular Modular (36 Créditos por Nivel) -->
+    <div class="hub-curriculum-section">
+      <div class="hub-curriculum-header">
+        <div>
+          <h3 style="margin: 0; font-size: 17px;">📚 Estructura Curricular Modular</h3>
+          <p class="muted small" style="margin: 3px 0 0 0;">36 créditos académicos estructurados en 3 módulos temáticos (12 créditos c/u).</p>
+        </div>
+        <button id="hubRefreshTreeBtn" type="button" class="dock-pill-btn small">
+          <span>🔄 Actualizar</span>
+        </button>
+      </div>
+      <div id="hubCurriculumTree" class="curriculum-tree-container">
+        <!-- Renderizado dinámico desde /api/curriculum/tree -->
       </div>
     </div>
   </section>
@@ -673,11 +692,16 @@
       </div>
     </div>
 
+    <div class="lesson-credits-reward-badge" id="lessonCreditsReward">
+      <div style="font-weight: 700; color: var(--accent-light);">🎓 +2 Créditos Académicos Obtenidos</div>
+      <small id="lessonCreditsAccum" class="muted small" style="display: block; margin-top: 2px;">Total en Nivel: 2 / 36 créditos</small>
+    </div>
+
     <div class="lesson-modal-actions">
       <button id="repeatLessonBtn" type="button" class="dock-pill-btn" style="flex: 1; padding: 12px; font-size: 13px; justify-content: center;">
         <span>🔄</span> Repetir
       </button>
-      <button id="nextLessonBtn" type="button" class="primary" style="flex: 2; padding: 12px; font-size: 14px; font-weight: 700; border-radius: var(--radius-full);">
+      <button id="nextLessonBtn" type="primary" class="primary" style="flex: 2; padding: 12px; font-size: 14px; font-weight: 700; border-radius: var(--radius-full);">
         <span>🚀 Siguiente Lección →</span>
       </button>
     </div>
@@ -726,6 +750,76 @@
   </div>
 </div>
 
+<!-- MODAL DE LA GUÍA OFICIAL DE ESTUDIO (POLYGLOT CURRICULUM HANDBOOK) -->
+<div id="handbookModal" class="modal-overlay" hidden>
+  <div class="modal-card handbook-modal-card">
+    <div class="handbook-modal-header">
+      <div class="handbook-title-meta">
+        <span class="handbook-code-badge" id="handbookCodeBadge">EN-A1-M1-L1</span>
+        <span class="handbook-credits-badge">🎓 2 Créditos</span>
+      </div>
+      <button id="closeHandbookModal" type="button" class="modal-close">&times;</button>
+    </div>
+
+    <div class="handbook-hero-banner">
+      <h2 id="handbookLessonTitle" style="margin: 0; font-size: 19px;">En la Cafetería: Pedidos y Cortesía</h2>
+      <p id="handbookModuleTitle" class="muted small" style="margin: 4px 0 0 0;">Módulo 1: Primeros Contactos y Supervivencia</p>
+    </div>
+
+    <!-- Tabs internos de navegación pedagógica del Handbook -->
+    <div class="handbook-tabs" role="tablist">
+      <button type="button" class="handbook-tab active" data-htab="cando">📌 Can-Do</button>
+      <button type="button" class="handbook-tab" data-htab="grammar">📐 Gramática</button>
+      <button type="button" class="handbook-tab" data-htab="vocab">📚 Colocaciones</button>
+      <button type="button" class="handbook-tab" data-htab="dialogue">💬 Diálogo</button>
+      <button type="button" class="handbook-tab" data-htab="tasks">🎯 Metas</button>
+    </div>
+
+    <div class="handbook-content-scroll" id="handbookContentScroll">
+      <!-- 1. Descriptores Can-Do -->
+      <div class="handbook-panel" id="hpanel-cando">
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--accent-light);">Descriptores de Desempeño (CEFR 2020)</h4>
+        <ul id="handbookCanDoList" class="handbook-checklist"></ul>
+      </div>
+
+      <!-- 2. Corpus Gramatical -->
+      <div class="handbook-panel" id="hpanel-grammar" hidden>
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--accent-light);">Fórmula & Mediación Contrastiva</h4>
+        <div class="handbook-formula-card" id="handbookGrammarFormula"></div>
+        <p id="handbookGrammarSummary" class="muted small" style="margin: 8px 0;"></p>
+        <h5 style="margin: 12px 0 6px 0; font-size: 13px;">Tabla de Contraste (Evitar Fósiles):</h5>
+        <div class="handbook-contrast-table" id="handbookContrastTable"></div>
+      </div>
+
+      <!-- 3. Colocaciones & IPA -->
+      <div class="handbook-panel" id="hpanel-vocab" hidden>
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--accent-light);">Colocaciones de Alta Frecuencia</h4>
+        <div class="handbook-collocations-grid" id="handbookCollocationsGrid"></div>
+      </div>
+
+      <!-- 4. Diálogo Modelo -->
+      <div class="handbook-panel" id="hpanel-dialogue" hidden>
+        <h4 style="margin: 0 0 4px 0; font-size: 14px; color: var(--accent-light);">Diálogo Modelo Anotado</h4>
+        <p id="handbookDialogueContext" class="muted small" style="margin-bottom: 10px;"></p>
+        <div class="handbook-dialogue-turns" id="handbookDialogueTurns"></div>
+      </div>
+
+      <!-- 5. Metas y Tareas -->
+      <div class="handbook-panel" id="hpanel-tasks" hidden>
+        <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--accent-light);">Tareas de Salida de la Lección</h4>
+        <div class="handbook-tasks-card" id="handbookTasksCard"></div>
+      </div>
+    </div>
+
+    <div class="handbook-modal-footer">
+      <button id="handbookStartWarmupBtn" type="button" class="primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 700; border-radius: var(--radius-full);">
+        <span>⚡ Iniciar Pre-sesión y Lección →</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <!-- BARRA DE NAVEGACIÓN INFERIOR (Estilo App Nativa Praktika) -->
@@ -752,6 +846,7 @@
   </button>
 </nav>
 
-<script type="module" src="/app.js?v=2.7"></script>
+<script type="module" src="/app.js?v=2.8"></script>
 </body>
+
 </html>

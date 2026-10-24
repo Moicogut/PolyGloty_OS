@@ -2965,4 +2965,540 @@ button.danger:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.16);
 }
 
+/* =========================================================================
+   FASE 2: ESTRUCTURA CURRICULAR MODULAR & HANDBOOK OFICIAL DE ESTUDIO
+   ========================================================================= */
+
+/* Recompensa de créditos en modal de fin de lección */
+.lesson-credits-reward-badge {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(16, 185, 129, 0.15));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  text-align: center;
+  margin: 12px 0 16px 0;
+}
+
+/* Sección de Árbol Curricular Modular */
+.hub-curriculum-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-top: 18px;
+}
+
+.hub-curriculum-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.curriculum-tree-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Tarjeta de Módulo Curricular (12 créditos) */
+.module-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.module-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.module-header {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.module-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.module-title-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.module-credits-pill {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+}
+
+.module-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.module-progress-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.module-progress-bar {
+  width: 90px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.module-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width var(--transition-normal);
+}
+
+.module-lessons-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Item de Lección en el Árbol Curricular */
+.curriculum-lesson-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 12px;
+  transition: background var(--transition-fast);
+}
+
+.curriculum-lesson-item:last-child {
+  border-bottom: none;
+}
+
+.curriculum-lesson-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.lesson-left-col {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lesson-status-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.curriculum-lesson-item.completed .lesson-status-icon {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.curriculum-lesson-item.active .lesson-status-icon {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.5);
+}
+
+.curriculum-lesson-item.locked .lesson-status-icon {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+}
+
+.lesson-text-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lesson-name-row {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lesson-sub-meta {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 8px;
+}
+
+.lesson-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lesson-guide-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: #94a3b8;
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.lesson-guide-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.lesson-play-btn {
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+}
+
+/* =========================================================================
+   MODAL EDITORIAL: POLYGLOT CURRICULUM HANDBOOK
+   ========================================================================= */
+
+.handbook-modal-card {
+  max-width: 680px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 24px;
+}
+
+.handbook-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.handbook-title-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.handbook-code-badge {
+  font-family: monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.handbook-credits-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border-radius: var(--radius-sm);
+}
+
+.handbook-hero-banner {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 12px;
+}
+
+/* Pestañas de Navegación del Handbook */
+.handbook-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.handbook-tab {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.handbook-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.handbook-tab.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.handbook-content-scroll {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+  margin-bottom: 14px;
+}
+
+/* 1. Lista Can-Do */
+.handbook-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.handbook-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.handbook-checklist li::before {
+  content: "✔";
+  color: #10b981;
+  font-weight: 800;
+}
+
+/* 2. Fórmula y Mediación Contrastiva */
+.handbook-formula-card {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px dashed rgba(99, 102, 241, 0.4);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-family: monospace;
+  font-size: 13.5px;
+  color: #e0e7ff;
+  font-weight: 600;
+}
+
+.handbook-contrast-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contrast-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contrast-wrong {
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.contrast-wrong::before { content: "❌"; font-size: 11px; }
+
+.contrast-right {
+  color: #34d399;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.contrast-right::before { content: "✅"; font-size: 11px; }
+
+.contrast-why {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.4;
+  margin-left: 20px;
+}
+
+/* 3. Colocaciones & Fonética */
+.handbook-collocations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.collocation-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.colloc-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.colloc-phrase {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.colloc-ipa {
+  font-family: monospace;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.colloc-example {
+  font-size: 12px;
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+.colloc-listen-btn {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.colloc-listen-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  color: #fff;
+}
+
+/* 4. Diálogo Modelo */
+.handbook-dialogue-turns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dialogue-turn-item {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  border-left: 3px solid var(--primary);
+}
+
+.dialogue-turn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.dialogue-speaker {
+  font-size: 12px;
+  font-weight: 800;
+  color: #818cf8;
+}
+
+.dialogue-text {
+  font-size: 13.5px;
+  color: #f1f5f9;
+  line-height: 1.4;
+}
+
+.dialogue-pragmatic-note {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+/* 5. Tareas del Handbook */
+.handbook-tasks-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-step-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.task-step-num {
+  width: 22px;
+  height: 22px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+
 
