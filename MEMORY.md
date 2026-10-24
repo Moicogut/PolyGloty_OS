@@ -263,7 +263,20 @@ En esta entrega se resolvió el desajuste pedagógico observado en producción (
 
 ### 14.3 Verificación y Estado de Pruebas
 - **Pruebas Unitarias e Integración**: Creado `test/pedagogical.test.js` con 7 pruebas que validan adaptación de misiones, restricciones de nivel A1, prompts pedagógicos, garantías de traducción y el escenario E2E exacto de las capturas (*"Yes, I do"* $\rightarrow$ *"Yes, I am"* / *"Sure, all set!"*).
-- **Suite Completa (`npm test`)**: **53 pruebas pasando al 100%**, 0 fallos, 1 omitida defensivamente (RLS en vivo sin credenciales). Latencia promedio sostenida en ~1474 ms.
+- **Suite Completa (`npm test`)**: **54 pruebas pasando al 100%**, 0 fallos, 1 omitida defensivamente (RLS en vivo sin credenciales). Latencia promedio sostenida en ~1474 ms.
+
+---
+
+## 15. Actualización de Modelos de Producción (Gemini 3.5 Flash & 3.1 Flash-Lite)
+
+- **Causa Raíz de Error 503 en Render**: Google retiró los modelos `gemini-1.5-flash` y `gemini-2.0-flash` (HTTP 404). Al haber un pico temporal de alta demanda en `gemini-3.8-flash` (HTTP 503), la lista de candidatos caía en los modelos obsoletos y reportaba error al frontend.
+- **Modelos Oficiales Activos**:
+  - `VOICE_MODEL`: `gemini-3.5-flash` (Respuesta HTTP 200 verificada con soporte completo de `responseSchema`).
+  - `VOICE_BACKUP_MODEL`: `gemini-3.1-flash-lite` (Respaldo ultra rápido verificado en <1s).
+  - Candidatos en fallback: `gemini-3.5-flash` -> `gemini-3.1-flash-lite` -> `gemini-3.8-flash` -> `gemini-flash-latest`.
+  - Excluidos estrictamente de `generateContent`: modelos WebSocket (`live`) y modelos descontinuados (`1.5`, `2.0`).
+- **Verificación**: `scripts/smoke.js` ejecutado en vivo con resultado `VERIFICADO (Éxito)`.
+
 
 
 

@@ -51,7 +51,7 @@ if (openaiKey) {
 }
 
 const testPhrase = "Hello Alex, I want to practice ordering a coffee.";
-const modelToTest = process.env.VOICE_MODEL || "gemini-3.8-flash";
+const modelToTest = process.env.VOICE_MODEL || "gemini-3.5-flash";
 
 console.log(`Modelo objetivo: ${modelToTest}`);
 console.log(`Frase de prueba enviada: "${testPhrase}"`);
@@ -61,10 +61,10 @@ async function runSmokeTest() {
   if (geminiKey) {
     const candidateList = [
       modelToTest,
+      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
       "gemini-3.8-flash",
-      "gemini-3.8-live",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash",
+      "gemini-flash-latest",
     ];
 
     let reply = "";

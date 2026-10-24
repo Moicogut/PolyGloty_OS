@@ -28,8 +28,8 @@ try {
 
 const PORT = Number(process.env.PORT || 3000);
 const PROVIDER = process.env.VOICE_PROVIDER || (process.env.GEMINI_API_KEY ? "gemini" : "openai");
-const VOICE_MODEL = process.env.VOICE_MODEL || (PROVIDER === "gemini" ? (process.env.GEMINI_LIVE_MODEL || "gemini-3.8-flash") : (process.env.REALTIME_MODEL || "gpt-realtime-2.1"));
-const VOICE_BACKUP_MODEL = process.env.VOICE_BACKUP_MODEL || (PROVIDER === "gemini" ? "gemini-3.8-live" : "gpt-realtime");
+const VOICE_MODEL = process.env.VOICE_MODEL || (PROVIDER === "gemini" ? (process.env.GEMINI_LIVE_MODEL || "gemini-3.5-flash") : (process.env.REALTIME_MODEL || "gpt-realtime-2.1"));
+const VOICE_BACKUP_MODEL = process.env.VOICE_BACKUP_MODEL || (PROVIDER === "gemini" ? "gemini-3.1-flash-lite" : "gpt-realtime");
 const MODEL = VOICE_MODEL; // compatibilidad retroactiva
 const VOICE = process.env.REALTIME_VOICE || "marin";
 const GEMINI_MODEL = VOICE_MODEL.startsWith("models/") ? VOICE_MODEL : `models/${VOICE_MODEL}`;
@@ -357,14 +357,14 @@ const routes = {
       recentErrors: state.data.errors || [],
     });
 
-    const candidateModels = [
+    const candidateModels = Array.from(new Set([
       VOICE_MODEL,
       VOICE_BACKUP_MODEL,
+      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
       "gemini-3.8-flash",
-      "gemini-3.8-live",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash",
-    ].filter(Boolean);
+      "gemini-flash-latest",
+    ])).filter(m => Boolean(m) && !m.includes("live") && !m.includes("1.5") && !m.includes("2.0"));
     let rawText = "";
     let lastError = null;
     const modelStart = Date.now();

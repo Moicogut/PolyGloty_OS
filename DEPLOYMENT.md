@@ -29,8 +29,8 @@ Render permite alojar aplicaciones Node.js con HTTPS gratis (ideal para Web Spee
 
 3. **Variables de Entorno en Render** (Pestaña *Environment*):
    - `VOICE_PROVIDER`: `gemini` (o `openai`).
-   - `VOICE_MODEL`: `gemini-2.0-flash` (modelo estable, no experimental).
-   - `VOICE_BACKUP_MODEL`: `gemini-1.5-flash` (modelo de respaldo configurable).
+   - `VOICE_MODEL`: `gemini-3.5-flash` (modelo estable activo).
+   - `VOICE_BACKUP_MODEL`: `gemini-3.1-flash-lite` (modelo de respaldo configurable).
    - `GEMINI_API_KEY`: Tu clave de Google Gemini.
    - `SUPABASE_URL`: *(Opcional)* URL de tu proyecto Supabase (ej. `https://xxxx.supabase.co`).
    - `SUPABASE_KEY`: *(Opcional)* Clave pública o de servicio de Supabase.
