@@ -14,6 +14,11 @@ import {
   validateWarmupCompletePayload,
   validateCurriculumCompletePayload,
   validateHandbookQuery,
+  validateProficiencyStartPayload,
+  validateProficiencyPhaseAPayload,
+  validateWrittenSubmissionPayload,
+  validateOralTurnPayload,
+  validateProficiencyFinalizePayload,
   ValidationError,
 } from "./lib/validator.js";
 import { logger } from "./lib/logger.js";
@@ -21,6 +26,14 @@ import { RateLimiter, UserUsageLimiter } from "./lib/limiter.js";
 import { SupabaseAdapter } from "./lib/supabase.js";
 import { getStudentHubStatus, generateWarmup, completeWarmup } from "./lib/hubService.js";
 import { getCurriculumTreeStatus, getHandbookChapter, awardLessonCredits } from "./lib/curriculumData.js";
+import {
+  startProficiencySession,
+  evaluatePhaseA,
+  evaluateWrittenHeuristic,
+  evaluateOralTurn,
+  finalizeProficiencyAudit,
+  verifyCertificate,
+} from "./lib/proficiencyAuditor.js";
 
 import {
   buildPedagogicalSystemInstruction,
@@ -222,6 +235,104 @@ const routes = {
       send(res, 200, result);
     } catch (err) {
       send(res, 400, { error: err.message || "Error al acreditar la lección curricular" });
+    }
+  },
+
+  "POST /api/proficiency/start": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateProficiencyStartPayload(b);
+      const state = resolveTenantStore(req, url);
+      const userCredits = state.data?.profile?.credits || 0;
+      const proficiencyUnlocked = Boolean(state.data?.profile?.proficiencyUnlocked);
+      const session = startProficiencySession({
+        ...payload,
+        userCredits,
+        proficiencyUnlocked,
+        userId: state.tenantId,
+      });
+
+      if (!session.eligible) {
+        return send(res, 403, session);
+      }
+      logger.info("proficiency_session_started", {
+        tenantId: state.tenantId,
+        testType: payload.testType,
+        targetLevel: payload.level,
+        sessionId: session.sessionId,
+      });
+      send(res, 200, session);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al iniciar la prueba de suficiencia" });
+    }
+  },
+
+  "POST /api/proficiency/submit-phase-a": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateProficiencyPhaseAPayload(b);
+      const result = evaluatePhaseA(payload);
+      send(res, 200, { ok: true, ...result });
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al procesar la Fase A" });
+    }
+  },
+
+  "POST /api/proficiency/submit-written": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateWrittenSubmissionPayload(b);
+      const evaluation = evaluateWrittenHeuristic(payload.text, payload.level, payload.lang);
+      send(res, 200, { ok: true, evaluation });
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al auditar la producción escrita" });
+    }
+  },
+
+  "POST /api/proficiency/submit-oral-turn": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateOralTurnPayload(b);
+      const evaluation = evaluateOralTurn(payload);
+      send(res, 200, { ok: true, evaluation });
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al auditar el turno oral" });
+    }
+  },
+
+  "POST /api/proficiency/finalize": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateProficiencyFinalizePayload(b);
+      const state = resolveTenantStore(req, url);
+      const result = finalizeProficiencyAudit({
+        ...payload,
+        userId: state.tenantId,
+        store: state,
+      });
+
+      logger.info("proficiency_audit_finalized", {
+        tenantId: state.tenantId,
+        testType: payload.testType,
+        targetLevel: payload.targetLevel,
+        overallScore: result.overallScore,
+        passed: result.passed,
+        certificateCode: result.certificate?.code || null,
+      });
+      send(res, 200, result);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al consolidar la prueba de suficiencia" });
+    }
+  },
+
+  "GET /api/proficiency/certificate": (req, res, url) => {
+    try {
+      const code = url.searchParams.get("code");
+      const state = resolveTenantStore(req, url);
+      const verification = verifyCertificate(code, state);
+      send(res, 200, verification);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al verificar el certificado" });
     }
   },
 

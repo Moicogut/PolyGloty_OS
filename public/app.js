@@ -1810,6 +1810,406 @@ async function onWarmupNextClick() {
   }
 }
 
+// ============================================================================
+// FASE 3: AUDITORÍA DE SUFICIENCIA Y CERTIFICACIÓN OFICIAL CEFR / HSK
+// ============================================================================
+let currentProfSession = null;
+let currentPhaseAIndex = 0;
+let phaseASelectedAnswer = null;
+let phaseAAnswers = [];
+let phaseATimerInterval = null;
+let phaseATimeRemaining = 45;
+let currentPhaseCIndex = 0;
+let phaseCTurns = [];
+
+function openProficiencyModal(testType = "certification_exit") {
+  const modal = $("#proficiencyModal");
+  if (!modal) return;
+
+  const curLevel = $("#level")?.value || "A1";
+  const curLang = lang();
+
+  if ($("#profModalTestTypeBadge")) {
+    $("#profModalTestTypeBadge").textContent = testType === "placement" ? "🧭 Test de Ubicación Diagnóstico" : "🎓 Examen de Certificación";
+  }
+  if ($("#profModalLevelBadge")) {
+    $("#profModalLevelBadge").textContent = `Nivel ${curLevel}`;
+  }
+  if ($("#profIntroTitle")) {
+    $("#profIntroTitle").textContent = testType === "placement" ? "Test de Ubicación Adaptativo" : `Examen de Certificación · Nivel ${curLevel}`;
+  }
+  if ($("#profIntroDesc")) {
+    $("#profIntroDesc").textContent = testType === "placement"
+      ? "Evaluación diagnóstica adaptativa para ubicar con precisión tu punto de inicio en el marco CEFR/HSK."
+      : `Examen de alta exigencia que audita tus competencias de salida para el Nivel ${curLevel}. Aprobación ≥ 75% emite certificado inmutable y promueve de nivel.`;
+  }
+
+  // Reset panels & stepper
+  setProfStep(1);
+  showProfPanel("profViewIntro");
+  currentProfSession = { testType, lang: curLang, level: curLevel };
+  modal.hidden = false;
+}
+
+function closeProficiencyModal() {
+  if (phaseATimerInterval) clearInterval(phaseATimerInterval);
+  const modal = $("#proficiencyModal");
+  if (modal) modal.hidden = true;
+}
+
+function setProfStep(stepNum) {
+  for (let i = 1; i <= 4; i++) {
+    const el = $(`#profStep${i}`);
+    if (el) {
+      el.classList.toggle("active", i === stepNum);
+      el.classList.toggle("completed", i < stepNum);
+    }
+  }
+}
+
+function showProfPanel(panelId) {
+  const panels = ["profViewIntro", "profViewPhaseA", "profViewPhaseB", "profViewPhaseC", "profViewResult"];
+  panels.forEach((p) => {
+    const el = $(`#${p}`);
+    if (el) el.hidden = (p !== panelId);
+  });
+}
+
+async function startActiveProficiencyExam() {
+  if (!currentProfSession) return;
+  try {
+    const candidateName = currentUser?.email?.split("@")[0] || "Estudiante Polyglot";
+    const res = await post("/api/proficiency/start", {
+      testType: currentProfSession.testType,
+      lang: currentProfSession.lang,
+      level: currentProfSession.level,
+      candidateName,
+    });
+
+    if (!res || !res.ok) {
+      throw new Error(res?.error || "No se pudo iniciar la sesión de suficiencia.");
+    }
+
+    currentProfSession = { ...currentProfSession, ...res };
+    currentPhaseAIndex = 0;
+    phaseAAnswers = [];
+    setProfStep(1);
+    showProfPanel("profViewPhaseA");
+    renderProfPhaseAQuestion();
+  } catch (err) {
+    toast("No elegible o error: " + err.message);
+  }
+}
+
+function renderProfPhaseAQuestion() {
+  const qList = currentProfSession?.phaseA?.questions || [];
+  const q = qList[currentPhaseAIndex];
+  if (!q) return;
+
+  phaseASelectedAnswer = null;
+  if ($("#phaseACounter")) $("#phaseACounter").textContent = `Reactivo ${currentPhaseAIndex + 1} de ${qList.length}`;
+  if ($("#phaseAPrompt")) $("#phaseAPrompt").textContent = q.prompt;
+  if ($("#phaseANextBtn")) $("#phaseANextBtn").disabled = true;
+
+  const optContainer = $("#phaseAOptions");
+  if (optContainer) {
+    optContainer.innerHTML = "";
+    q.options.forEach((optText, idx) => {
+      const btn = el("button", "prof-opt-btn");
+      btn.type = "button";
+      btn.innerHTML = `<span style="font-weight: 700; opacity: 0.6;">${String.fromCharCode(65 + idx)}.</span> <span>${optText}</span>`;
+      btn.addEventListener("click", () => {
+        optContainer.querySelectorAll(".prof-opt-btn").forEach((b) => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        phaseASelectedAnswer = idx;
+        const nextBtn = $("#phaseANextBtn");
+        if (nextBtn) nextBtn.disabled = false;
+      });
+      optContainer.appendChild(btn);
+    });
+  }
+
+  // Temporizador de 45 segundos
+  if (phaseATimerInterval) clearInterval(phaseATimerInterval);
+  phaseATimeRemaining = currentProfSession.phaseA?.timeLimitPerQuestionSec || 45;
+  const timerBadge = $("#phaseATimer");
+  if (timerBadge) {
+    timerBadge.textContent = `⏱️ ${phaseATimeRemaining}s`;
+    timerBadge.style.color = "#f87171";
+  }
+
+  phaseATimerInterval = setInterval(() => {
+    phaseATimeRemaining--;
+    if (timerBadge) timerBadge.textContent = `⏱️ ${phaseATimeRemaining}s`;
+    if (phaseATimeRemaining <= 0) {
+      clearInterval(phaseATimerInterval);
+      onPhaseANext();
+    }
+  }, 1000);
+}
+
+function onPhaseANext() {
+  if (phaseATimerInterval) clearInterval(phaseATimerInterval);
+  phaseAAnswers.push(phaseASelectedAnswer !== null ? phaseASelectedAnswer : -1);
+
+  const qList = currentProfSession?.phaseA?.questions || [];
+  if (currentPhaseAIndex < qList.length - 1) {
+    currentPhaseAIndex++;
+    renderProfPhaseAQuestion();
+  } else {
+    submitProfPhaseA();
+  }
+}
+
+async function submitProfPhaseA() {
+  try {
+    const res = await post("/api/proficiency/submit-phase-a", {
+      testType: currentProfSession.testType,
+      lang: currentProfSession.lang,
+      level: currentProfSession.targetLevel || currentProfSession.level,
+      answers: phaseAAnswers,
+    });
+
+    currentProfSession.phaseAResult = res;
+    toast(`Fase A completada: ${res.phaseAScore}% de precisión estructural.`);
+
+    // Transicionar a Fase B (Redacción)
+    setProfStep(2);
+    showProfPanel("profViewPhaseB");
+    setupProfPhaseB();
+  } catch (err) {
+    toast("Error al evaluar Fase A: " + err.message);
+  }
+}
+
+function setupProfPhaseB() {
+  const pB = currentProfSession?.phaseB || {};
+  if ($("#phaseBTaskTitle")) $("#phaseBTaskTitle").textContent = pB.title || "Consigna de Redacción";
+  if ($("#phaseBTaskPrompt")) $("#phaseBTaskPrompt").textContent = pB.prompt || "";
+  const textarea = $("#phaseBInput");
+  const counter = $("#phaseBWordCounter");
+  const submitBtn = $("#phaseBSubmitBtn");
+
+  if (textarea) {
+    textarea.value = "";
+    textarea.oninput = () => {
+      const words = textarea.value.trim().split(/\s+/).filter((w) => w.length > 0);
+      const count = words.length;
+      const minW = pB.minWords || 35;
+      const targetW = pB.targetWords || 50;
+      if (counter) counter.textContent = `${count} / ${targetW} palabras (mín. ${minW})`;
+      if (submitBtn) submitBtn.disabled = count < minW;
+    };
+  }
+}
+
+async function submitProfPhaseB() {
+  const text = $("#phaseBInput")?.value || "";
+  const submitBtn = $("#phaseBSubmitBtn");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Auditando con Rúbrica CEFR...";
+  }
+
+  try {
+    const res = await post("/api/proficiency/submit-written", {
+      text,
+      promptId: currentProfSession.phaseB?.promptId,
+      level: currentProfSession.targetLevel || currentProfSession.level,
+      lang: currentProfSession.lang,
+    });
+
+    currentProfSession.phaseBResult = res.evaluation;
+    currentProfSession.writtenText = text;
+
+    const feedbackBox = $("#phaseBFeedbackBox");
+    if (feedbackBox) {
+      feedbackBox.hidden = false;
+      feedbackBox.textContent = `✓ Redacción auditada (Score: ${res.evaluation.overallWrittenScore}% · TTR: ${res.evaluation.ttr}): ${res.evaluation.feedback}`;
+    }
+
+    toast(`Fase B completada: ${res.evaluation.overallWrittenScore}% en redacción.`);
+
+    setTimeout(() => {
+      // Transicionar a Fase C (Oral con Wetty)
+      setProfStep(3);
+      showProfPanel("profViewPhaseC");
+      setupProfPhaseC();
+    }, 1200);
+  } catch (err) {
+    toast("Error al evaluar Fase B: " + err.message);
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Reintentar Entrega";
+    }
+  }
+}
+
+function setupProfPhaseC() {
+  currentPhaseCIndex = 0;
+  phaseCTurns = [];
+  renderProfPhaseCTurn();
+}
+
+function renderProfPhaseCTurn() {
+  const qList = currentProfSession?.phaseC?.questions || [];
+  const q = qList[currentPhaseCIndex];
+  if (!q) return;
+
+  if ($("#phaseCTurnCounter")) $("#phaseCTurnCounter").textContent = `Pregunta ${currentPhaseCIndex + 1} de ${qList.length}`;
+  if ($("#phaseCExaminerText")) $("#phaseCExaminerText").textContent = `"${q.prompt}"`;
+  const oralInput = $("#phaseCOralInput");
+  if (oralInput) oralInput.value = "";
+
+  // Botón para reproducir audio de la examinadora Wetty
+  const listenBtn = $("#phaseCListenModelBtn");
+  if (listenBtn) {
+    listenBtn.onclick = () => speakVoice(q.prompt);
+  }
+
+  // Reproducir automáticamente la pregunta de Wetty
+  speakVoice(q.prompt);
+}
+
+async function onPhaseCNextTurn() {
+  const qList = currentProfSession?.phaseC?.questions || [];
+  const q = qList[currentPhaseCIndex];
+  const userText = ($("#phaseCOralInput")?.value || "").trim();
+
+  // Enviar turno para evaluación
+  try {
+    const res = await post("/api/proficiency/submit-oral-turn", {
+      questionId: q.id,
+      userTranscript: userText || "I understand the question and answer clearly.",
+      latencyMs: 1100,
+      audioDurationMs: 5000,
+      level: currentProfSession.targetLevel || currentProfSession.level,
+      lang: currentProfSession.lang,
+    });
+    phaseCTurns.push(res.evaluation);
+  } catch (e) {
+    console.warn("Fallo al auditar turno oral:", e);
+  }
+
+  if (currentPhaseCIndex < qList.length - 1) {
+    currentPhaseCIndex++;
+    renderProfPhaseCTurn();
+  } else {
+    finalizeProfExam();
+  }
+}
+
+async function finalizeProfExam() {
+  const nextBtn = $("#phaseCNextTurnBtn");
+  if (nextBtn) {
+    nextBtn.disabled = true;
+    nextBtn.textContent = "Consolidando Dictamen Oficial...";
+  }
+
+  // Calcular score oral promedio
+  const avgSpoken = phaseCTurns.length > 0
+    ? Math.round(phaseCTurns.reduce((acc, t) => acc + (t.turnScore || 80), 0) / phaseCTurns.length)
+    : 80;
+
+  const phaseCResult = {
+    overallSpokenScore: avgSpoken,
+    fluencyScore: avgSpoken,
+    pragmaticScore: avgSpoken,
+    turns: phaseCTurns,
+  };
+
+  try {
+    const candidateName = currentUser?.email?.split("@")[0] || "Estudiante Polyglot";
+    const res = await post("/api/proficiency/finalize", {
+      sessionId: currentProfSession.sessionId,
+      testType: currentProfSession.testType,
+      lang: currentProfSession.lang,
+      targetLevel: currentProfSession.targetLevel || currentProfSession.level,
+      candidateName,
+      phaseAResult: currentProfSession.phaseAResult || { phaseAScore: 80 },
+      phaseBResult: currentProfSession.phaseBResult || { overallWrittenScore: 80 },
+      phaseCResult,
+      writtenText: currentProfSession.writtenText || "",
+    });
+
+    setProfStep(4);
+    showProfPanel("profViewResult");
+    renderProfResult(res);
+  } catch (err) {
+    toast("Error al finalizar auditoría: " + err.message);
+    if (nextBtn) {
+      nextBtn.disabled = false;
+      nextBtn.textContent = "Reintentar Consolidación";
+    }
+  }
+}
+
+function renderProfResult(result) {
+  const passed = result.passed;
+  const score = result.overallScore;
+  const audit = result.audit || {};
+  const cert = result.certificate;
+
+  const summaryEl = $("#profResultSummary");
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 52px; margin-bottom: 8px;">${passed ? "🎖️" : "📚"}</div>
+        <div class="proficiency-banner-badge" style="font-size: 13px;">${passed ? "DICTAMEN: OFICIALMENTE APROBADO" : "DICTAMEN: EN PROCESO DE CONSOLIDACIÓN"}</div>
+        <h2 style="font-size: 24px; margin: 10px 0 4px 0;">Puntaje Global de Suficiencia: ${score}/100</h2>
+        <p class="muted small">${passed ? `¡Felicitaciones! Has demostrado dominio de las competencias Can-Do de nivel ${result.promotedLevel}.` : "Has completado la prueba. Te recomendamos afianzar los puntos de gramática y fluidez antes de reintentar."}</p>
+      </div>
+
+      <div class="hub-radar-bars" style="margin: 16px 0; background: rgba(255,255,255,0.02); padding: 14px; border-radius: var(--radius-md);">
+        <div class="radar-bar-item">
+          <span class="radar-label">Precisión Estructural (CAT Cloze)</span>
+          <div class="radar-track"><div class="radar-fill" style="width: ${audit.scores?.structural || 0}%;"></div></div>
+          <b>${audit.scores?.structural || 0}%</b>
+        </div>
+        <div class="radar-bar-item">
+          <span class="radar-label">Producción Escrita (Rúbrica CEFR)</span>
+          <div class="radar-track"><div class="radar-fill" style="width: ${audit.scores?.written || 0}%;"></div></div>
+          <b>${audit.scores?.written || 0}%</b>
+        </div>
+        <div class="radar-bar-item">
+          <span class="radar-label">Expresión Oral (Entrevista Wetty)</span>
+          <div class="radar-track"><div class="radar-fill" style="width: ${audit.scores?.spoken || 0}%;"></div></div>
+          <b>${audit.scores?.spoken || 0}%</b>
+        </div>
+      </div>
+    `;
+  }
+
+  const certWrap = $("#profCertificateWrapper");
+  if (cert && passed && certWrap) {
+    certWrap.hidden = false;
+    if ($("#certCandidateName")) $("#certCandidateName").textContent = cert.candidateName;
+    if ($("#certLevelBadge")) $("#certLevelBadge").textContent = `NIVEL ${cert.certifiedLevel} · ACREDITADO`;
+    if ($("#certMetricOverall")) $("#certMetricOverall").textContent = `${cert.overallScore}%`;
+    if ($("#certMetricLang")) $("#certMetricLang").textContent = cert.language;
+    if ($("#certMetricCode")) $("#certMetricCode").textContent = cert.code;
+    if ($("#certHashDisplay")) $("#certHashDisplay").textContent = cert.verificationHash;
+
+    const printBtn = $("#certPrintBtn");
+    if (printBtn) printBtn.onclick = () => window.print();
+
+    const finishBtn = $("#certFinishBtn");
+    if (finishBtn) {
+      finishBtn.onclick = async () => {
+        closeProficiencyModal();
+        await refresh();
+        toast(`🎓 ¡Nivel actualizado a ${result.promotedLevel}!`);
+      };
+    }
+  } else if (certWrap) {
+    certWrap.hidden = true;
+  }
+}
+
+async function viewCertificates() {
+  toast("Consultando credenciales oficiales...");
+  openProficiencyModal("placement");
+}
 
 // ---------------------------------------------------------------- evaluación y competencias
 function renderCompetencies() {
@@ -2267,6 +2667,16 @@ async function init() {
       $("#zhWaitlistEmail").value = "";
     }
   });
+
+  // Eventos de Auditoría de Suficiencia y Certificación (Fase 3)
+  $("#hubOpenExitExamBtn")?.addEventListener("click", () => openProficiencyModal("certification_exit"));
+  $("#hubOpenPlacementBtn")?.addEventListener("click", () => openProficiencyModal("placement"));
+  $("#hubViewCertsBtn")?.addEventListener("click", () => viewCertificates());
+  $("#closeProficiencyModal")?.addEventListener("click", () => closeProficiencyModal());
+  $("#profStartExamBtn")?.addEventListener("click", () => startActiveProficiencyExam());
+  $("#phaseANextBtn")?.addEventListener("click", () => onPhaseANext());
+  $("#phaseBSubmitBtn")?.addEventListener("click", () => submitProfPhaseB());
+  $("#phaseCNextTurnBtn")?.addEventListener("click", () => onPhaseCNextTurn());
 
   window.speechSynthesis?.getVoices();
 

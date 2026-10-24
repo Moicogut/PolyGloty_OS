@@ -252,6 +252,30 @@
         <!-- Renderizado dinámico desde /api/curriculum/tree -->
       </div>
     </div>
+
+    <!-- Sección de Pruebas de Suficiencia y Certificación Oficial (Fase 3) -->
+    <div class="hub-proficiency-section">
+      <div class="hub-proficiency-banner" id="hubProficiencyBanner">
+        <div class="proficiency-banner-content">
+          <div class="proficiency-banner-badge" id="profBannerBadge">🎓 ACREDITACIÓN OFICIAL CEFR / HSK</div>
+          <h3 id="profBannerTitle" style="margin: 6px 0; font-size: 18px;">Prueba de Suficiencia de Nivel</h3>
+          <p id="profBannerDesc" class="muted small" style="margin: 0 0 12px 0;">
+            Examen auditado oral y escrito (15 min) para certificar tu nivel lingüístico con informe inmutable y credencial verificable.
+          </p>
+          <div class="proficiency-banner-actions">
+            <button id="hubOpenExitExamBtn" type="button" class="primary" style="padding: 10px 18px; font-weight: 700; border-radius: var(--radius-full);">
+              <span>🎓 Tomar Examen de Certificación</span>
+            </button>
+            <button id="hubOpenPlacementBtn" type="button" class="dock-pill-btn" style="padding: 10px 16px;">
+              <span>🧭 Test de Ubicación</span>
+            </button>
+            <button id="hubViewCertsBtn" type="button" class="dock-pill-btn" style="padding: 10px 16px;">
+              <span>📜 Mis Certificados</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- TAB 1: HABLAR (ESTILO PRAKTIKA CON TUTOR AVATAR) -->
@@ -819,6 +843,185 @@
   </div>
 </div>
 
+<!-- MODAL DE AUDITORÍA DE SUFICIENCIA Y CERTIFICACIÓN OFICIAL (FASE 3) -->
+<div id="proficiencyModal" class="modal-overlay" hidden>
+  <div class="modal-card proficiency-modal-card">
+    <div class="proficiency-modal-header">
+      <div class="proficiency-header-meta">
+        <span class="prof-tag-badge" id="profModalTestTypeBadge">Examen de Certificación</span>
+        <span class="prof-level-badge" id="profModalLevelBadge">Nivel A1</span>
+      </div>
+      <button id="closeProficiencyModal" type="button" class="modal-close">&times;</button>
+    </div>
+
+    <!-- Stepper de Fases -->
+    <div class="prof-stepper">
+      <div class="prof-step-item active" id="profStep1">
+        <span class="step-num">1</span>
+        <span class="step-label">Fase A: Estructura</span>
+      </div>
+      <div class="prof-step-item" id="profStep2">
+        <span class="step-num">2</span>
+        <span class="step-label">Fase B: Redacción</span>
+      </div>
+      <div class="prof-step-item" id="profStep3">
+        <span class="step-num">3</span>
+        <span class="step-label">Fase C: Oral Wetty</span>
+      </div>
+      <div class="prof-step-item" id="profStep4">
+        <span class="step-num">4</span>
+        <span class="step-label">Certificado</span>
+      </div>
+    </div>
+
+    <div class="prof-modal-scroll-body">
+      <!-- 1. Pantalla Inicial (Intro) -->
+      <div id="profViewIntro" class="prof-view-panel">
+        <div class="prof-intro-hero">
+          <div class="prof-seal-icon">🏆</div>
+          <h2 id="profIntroTitle" style="margin: 8px 0; font-size: 20px;">Auditoría de Suficiencia Lingüística</h2>
+          <p id="profIntroDesc" class="muted small" style="margin-bottom: 16px;">
+            Evaluación estandarizada en 3 fases: Precisión gramatical (CAT Cloze), Producción escrita (Rúbrica CEFR) y Entrevista oral formal con Wetty Examinadora.
+          </p>
+          <div class="prof-rules-grid">
+            <div class="prof-rule-card">
+              <b>⏱️ Control de Tiempo</b>
+              <small class="muted" style="display: block; margin-top: 4px;">45s por reactivo estructural y tiempo controlado de redacción.</small>
+            </div>
+            <div class="prof-rule-card">
+              <b>🛡️ Auditoría Inmutable</b>
+              <small class="muted" style="display: block; margin-top: 4px;">Aprobación con score ≥ 75% emite credencial oficial verificable SHA-256.</small>
+            </div>
+          </div>
+          <button id="profStartExamBtn" type="button" class="primary" style="width: 100%; margin-top: 18px; padding: 14px; font-weight: 700; border-radius: var(--radius-full);">
+            <span>🚀 Comenzar Examen Auditado</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Fase A: CAT Cloze Test -->
+      <div id="profViewPhaseA" class="prof-view-panel" hidden>
+        <div class="prof-phase-header">
+          <div class="prof-question-count" id="phaseACounter">Reactivo 1 de 6</div>
+          <div class="prof-timer-badge" id="phaseATimer">⏱️ 45s</div>
+        </div>
+        <div class="prof-card-box">
+          <div class="prof-prompt-text" id="phaseAPrompt">Cargando reactivo...</div>
+          <div class="prof-options-list" id="phaseAOptions"></div>
+        </div>
+        <button id="phaseANextBtn" type="button" class="primary" disabled style="width: 100%; margin-top: 14px; padding: 12px; font-weight: 700; border-radius: var(--radius-full);">
+          <span>Confirmar y Siguiente →</span>
+        </button>
+      </div>
+
+      <!-- 3. Fase B: Producción Escrita -->
+      <div id="profViewPhaseB" class="prof-view-panel" hidden>
+        <div class="prof-phase-header">
+          <div class="prof-badge-pill">📝 Fase B · Producción Escrita</div>
+          <div class="prof-word-counter" id="phaseBWordCounter">0 / 50 palabras</div>
+        </div>
+        <div class="prof-card-box">
+          <h4 id="phaseBTaskTitle" style="margin: 0 0 6px 0; font-size: 15px; color: var(--accent-light);">Consigna de Redacción</h4>
+          <p id="phaseBTaskPrompt" class="muted small" style="margin: 0 0 12px 0;"></p>
+          <textarea id="phaseBInput" class="prof-textarea" rows="6" placeholder="Escribe tu redacción aquí... Demuestra tu variedad léxica y conectores."></textarea>
+          <div id="phaseBFeedbackBox" class="prof-eval-feedback" hidden></div>
+        </div>
+        <button id="phaseBSubmitBtn" type="button" class="primary" disabled style="width: 100%; margin-top: 14px; padding: 12px; font-weight: 700; border-radius: var(--radius-full);">
+          <span>Entregar Redacción para Auditoría →</span>
+        </button>
+      </div>
+
+      <!-- 4. Fase C: Entrevista Oral con Wetty Examinadora -->
+      <div id="profViewPhaseC" class="prof-view-panel" hidden>
+        <div class="prof-phase-header">
+          <div class="prof-badge-pill">🎙️ Fase C · Entrevista Oral con Wetty</div>
+          <div class="prof-turn-counter" id="phaseCTurnCounter">Pregunta 1 de 4</div>
+        </div>
+        <div class="prof-card-box">
+          <div class="prof-examiner-row">
+            <div class="tutor-avatar-wrap small">
+              <img src="/wetty.jpg" alt="Wetty Examinadora" class="tutor-avatar-img">
+            </div>
+            <div>
+              <b style="font-size: 14px;">Wetty · Examinadora Oficial</b>
+              <small class="muted small" style="display: block;">Rol formal de evaluación CEFR (sin interrupciones pedagógicas)</small>
+            </div>
+          </div>
+          <div class="prof-examiner-speech-box" id="phaseCExaminerText">
+            "Welcome to your official spoken assessment..."
+          </div>
+          <div class="row" style="margin-top: 8px;">
+            <button id="phaseCListenModelBtn" type="button" class="dock-pill-btn small">
+              <span>🔊 Escuchar a Wetty</span>
+            </button>
+          </div>
+          <div class="prof-oral-input-area" style="margin-top: 14px;">
+            <label class="small muted" style="display: block; margin-bottom: 4px;">Tu Respuesta Verbal Transcrita:</label>
+            <textarea id="phaseCOralInput" class="prof-textarea small" rows="2" placeholder="Responde en voz alta o escribe tu intervención aquí..."></textarea>
+          </div>
+        </div>
+        <button id="phaseCNextTurnBtn" type="button" class="primary" style="width: 100%; margin-top: 14px; padding: 12px; font-weight: 700; border-radius: var(--radius-full);">
+          <span>Siguiente Pregunta Oral →</span>
+        </button>
+      </div>
+
+      <!-- 5. Pantalla de Resultados y Certificado Oficial -->
+      <div id="profViewResult" class="prof-view-panel" hidden>
+        <div id="profResultSummary" class="prof-result-summary">
+          <!-- Renderizado dinámico del dictamen y desglose -->
+        </div>
+        <!-- Certificado Oficial Exportable / Imprimible -->
+        <div id="profCertificateWrapper" hidden>
+          <div class="official-certificate-card" id="officialCertificateCard">
+            <div class="cert-border-outer">
+              <div class="cert-border-inner">
+                <div class="cert-header">
+                  <div class="cert-seal">🏅</div>
+                  <div class="cert-org">POLYGLOT ASSESSMENT COUNCIL</div>
+                  <div class="cert-title">CERTIFICADO OFICIAL DE SUFICIENCIA LINGÜÍSTICA</div>
+                </div>
+                <div class="cert-body">
+                  <p class="cert-subtext">Por cuanto ha demostrado las competencias y descriptores Can-Do establecidos en el estándar internacional CEFR Companion Volume 2020, se confiere la acreditación a:</p>
+                  <h1 class="cert-candidate-name" id="certCandidateName">Carlos Alumno</h1>
+                  <div class="cert-level-award">
+                    <span class="cert-level-badge" id="certLevelBadge">NIVEL A1 · BREAKTHROUGH</span>
+                  </div>
+                  <div class="cert-metrics-row">
+                    <div class="cert-metric-col">
+                      <span class="cert-metric-label">Puntaje Global</span>
+                      <b class="cert-metric-val" id="certMetricOverall">88%</b>
+                    </div>
+                    <div class="cert-metric-col">
+                      <span class="cert-metric-label">Idioma Acreditado</span>
+                      <b class="cert-metric-val" id="certMetricLang">Inglés Internacional</b>
+                    </div>
+                    <div class="cert-metric-col">
+                      <span class="cert-metric-label">Código de Verificación</span>
+                      <b class="cert-metric-val" id="certMetricCode">POLY-A1-4F2A-88B1</b>
+                    </div>
+                  </div>
+                  <div class="cert-hash-footer">
+                    <span>Firma Criptográfica SHA-256:</span>
+                    <code id="certHashDisplay">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cert-action-bar">
+            <button id="certPrintBtn" type="button" class="dock-pill-btn" style="flex: 1; padding: 12px; justify-content: center;">
+              <span>🖨️ Imprimir / Guardar PDF</span>
+            </button>
+            <button id="certFinishBtn" type="button" class="primary" style="flex: 1; padding: 12px; font-weight: 700; border-radius: var(--radius-full);">
+              <span>✅ Finalizar y Regresar al Hub</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
@@ -846,7 +1049,7 @@
   </button>
 </nav>
 
-<script type="module" src="/app.js?v=2.8"></script>
+<script type="module" src="/app.js?v=2.9"></script>
 </body>
 
 </html>

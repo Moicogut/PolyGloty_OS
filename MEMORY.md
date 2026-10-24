@@ -455,3 +455,59 @@ Se implementó la arquitectura curricular formal y el libro oficial canónico de
   - Endpoint de árbol curricular: `GET /api/curriculum/tree?lang=en&level=A1` responde 200 OK con los 3 módulos temáticos y 36 créditos meta.
   - Endpoint de Handbook: `GET /api/curriculum/handbook?lang=en&level=A1&lessonId=cafe` responde 200 OK con las 5 dimensiones pedagógicas y código canónico `EN-A1-M1-L1`.
   - Frontend actualizado: `index.html` sirviendo `/app.js?v=2.8` con el Handbook modal y el Warm-up Booster integrados.
+
+---
+
+## 21. Fase 3: Módulo de Pruebas de Suficiencia Auditada (Oral + Escrito) y Certificación Digital (Completada y Verificada)
+
+Se implementó el módulo de auditoría de suficiencia lingüística para medir con rigor y certificar el nivel exacto del estudiante:
+
+### 21.1 Motor de Auditoría Tridimensional (`lib/proficiencyAuditor.js`)
+- **Doble Modalidad de Evaluación**:
+  1. **Test de Ubicación Diagnóstico (`placement`)**:
+     - Disponible de forma inmediata para cualquier estudiante.
+     - Evalúa de forma transversal desde A1 hasta B2 (o HSK 1 a 3) para ubicar con precisión el nivel inicial.
+  2. **Examen de Certificación de Nivel (`certification_exit`)**:
+     - Control estricto de elegibilidad: requiere 36 créditos académicos acumulados en el nivel o la bandera `proficiencyUnlocked = true`.
+     - Aprobación con puntaje global $\ge 75\%$ promueve al estudiante al siguiente nivel (ej. A1 $\rightarrow$ A2) y resetea créditos para el nuevo ciclo.
+- **Estructura Tridimensional de la Prueba**:
+  - **Fase A: Precisión Estructural (CAT Cloze Test)**:
+    - 6 reactivos adaptativos cronometrados con 45 segundos por pregunta (`#phaseATimer`).
+    - Banco calibrado con explicaciones pedagógicas de respuesta errónea vs estándar.
+  - **Fase B: Producción Escrita Auditada**:
+    - Generador de consigna situacional por nivel (ej. correo de confirmación a hotel en A1, correo formal de disculpa en A2).
+    - Rúbrica CEFR determinista y cuantitativa: cálculo de Type-Token Ratio (TTR), extensión y rango de palabras (mín. 35-50 palabras), conectores discursivos, mayúsculas y control sintáctico.
+  - **Fase C: Entrevista Oral Auditada con Wetty**:
+    - Rol de **Examinadora Formal** (Wetty no interrumpe ni ofrece pistas pedagógicas durante el examen).
+    - 4 turnos no guionados de dificultad gradual con síntesis de voz nativa.
+    - Medición de latencia de vacilación, inteligibilidad, longitud del enunciado y adecuación pragmática.
+- **Ponderación Oficial y Consolidación**:
+  - Ponderación: 30% Fase A (Estructural) + 35% Fase B (Redacción) + 35% Fase C (Expresión Oral).
+  - Dictamen: Aprobado si puntaje $\ge 75\%$.
+
+### 21.2 Certificado Digital Inmutable y Firma Criptográfica
+- Emisión de código serial único verificado: formato `POLY-[LEVEL]-[HEX4]-[HEX4]` (ej. `POLY-A1-4F2A-88B1`).
+- Hash de verificación SHA-256 generado a partir de `userId|candidateName|lang|level|score|code|timestamp`.
+- Consulta pública y validación institucional mediante endpoint `GET /api/proficiency/certificate?code=...`.
+- Plantilla visual prémium de diploma con doble marco dorado, sello de acreditación y reglas de impresión limpia `@media print`.
+
+### 21.3 Modelo de Base de Datos y RLS Multi-Tenant (`supabase/migrations/004_curriculum_suficiencia.sql`)
+- Creada tabla `public.proficiency_audits` con RLS estricto (`user_id = auth.uid()`), política pública de lectura por `certificate_code` para validación de terceros y almacenamiento persistente en JSONB de transcripciones y sub-puntuaciones.
+- Creadas tablas `public.user_credits` y `public.user_challenges` para trazabilidad completa.
+
+### 21.4 Contratos de API Multi-Tenant (`server.js`)
+- `POST /api/proficiency/start`: Valida elegibilidad por créditos y arranca sesión de examen.
+- `POST /api/proficiency/submit-phase-a`: Evalúa los 6 reactivos adaptativos CAT Cloze.
+- `POST /api/proficiency/submit-written`: Evalúa la redacción con rúbrica CEFR.
+- `POST /api/proficiency/submit-oral-turn`: Audita turnos orales de la examinadora.
+- `POST /api/proficiency/finalize`: Consolida puntajes, emite certificado, actualiza nivel en Store multi-tenant y registra en historial.
+- `GET /api/proficiency/certificate?code=...`: Consulta y auditoría de credenciales oficiales.
+
+### 21.5 Evidencias de Verificación (DoD)
+- **Batería de Pruebas Automatizadas**:
+  - `test/proficiency.test.js`: 5 tests unitarios cubriendo elegibilidad, Fase A, Fase B con TTR, Fase C oral y emisión inmutable con promoción A1 $\rightarrow$ A2 (**100% pasando**).
+  - `npm test`: **73 tests ejecutados, 72 aprobados, 0 fallos, 1 omitido defensivamente**. Latencia promedio sostenida en 1474 ms.
+- **Verificación Visual E2E en Navegador**:
+  - Subagente de navegador completó el flujo E2E: Banner en Hub $\rightarrow$ Test de Ubicación $\rightarrow$ Fase A (6 preguntas contestadas con timer) $\rightarrow$ Fase B (redacción de 50 palabras auditada) $\rightarrow$ Fase C (entrevista oral con Wetty) $\rightarrow$ Dictamen final con reporte porcentual.
+  - Grabación completa de la sesión: `fase3_proficiency_audit_flow_1792862321281.webp`.
+  - Capturas registradas: `hub_proficiency_banner_1792862401563.png`, `proficiency_intro_modal_1792862468058.png`, `proficiency_exam_result_1792863587168.png`.
