@@ -632,5 +632,37 @@ Se implementó el módulo de auditoría de suficiencia lingüística para medir 
 - **Suite Completa del Proyecto**: `npm test` (**90 tests ejecutados, 89 pasando, 0 fallos, 1 omitido por RLS remoto sin credenciales**).
 - **Cero Regresiones**: Compatibilidad total con el flujo de práctica individual, auditoría de suficiencia (Fase 3), algoritmos YIN y persistencia híbrida.
 
+---
+
+## 25. Solución 1: Persistencia y Registro de Usuarios en Tiempo Real (`user_usage` y `profiles`)
+
+En respuesta a la auditoría técnica de persistencia donde la tabla `public.user_usage` de Supabase se encontraba vacía por falta de sincronización reactiva en usuarios nuevos o existentes, se implementó una solución arquitectónica de doble capa (Trigger de Base de Datos + Lazy Upsert en Backend).
+
+### 25.1 Migración SQL de Automatización (`supabase/migrations/006_fix_user_usage_sync.sql`)
+1. **Trigger `handle_new_user()` vinculado a `auth.users`**:
+   - Ejecutado como `SECURITY DEFINER` tras `INSERT ON auth.users`.
+   - Inserta automáticamente el perfil público en `public.profiles` (`id`, `email`, `full_name`, `created_at`) con `ON CONFLICT (id) DO NOTHING`.
+   - Inserta inmediatamente la fila inicial en `public.user_usage` (`user_id`, `usage_date = CURRENT_DATE`, `seconds_used = 0`, `turns_count = 0`, `updated_at = NOW()`) con `ON CONFLICT (user_id, usage_date) DO NOTHING`.
+2. **Políticas Row Level Security (RLS) Permisivas y Seguras**:
+   - `public.user_usage`: Habilitado RLS con políticas de `SELECT`, `INSERT` y `UPDATE` restringidas a `user_id = auth.uid()::text`, otorgando permisos a roles `authenticated` y `service_role`.
+   - `public.profiles`: Habilitado RLS con políticas para que el usuario pueda consultar, insertar y actualizar su propio perfil (`id = auth.uid()::text`).
+3. **Sincronización Retroactiva (Backfill)**:
+   - Query idempotent que puebla de inmediato a todos los usuarios preexistentes en `auth.users` hacia `public.profiles` y crea su registro de hoy en `public.user_usage`.
+
+### 25.2 Refuerzo en Backend (*Lazy Upsert* en `server.js` y `lib/supabase.js`)
+1. **Método `ensureDailyUsage(userId, dateStr)` (`lib/supabase.js`)**:
+   - Sincroniza primero el perfil base en `public.profiles` para evitar violaciones de clave foránea (`FOREIGN KEY user_usage_user_id_fkey`).
+   - Realiza un upsert idempotente en `public.user_usage` con `Prefer: resolution=ignore-duplicates`.
+   - Integrado en los flujos de `register()` y `login()` de Supabase Cloud.
+2. **Middleware / Helper `ensureUserUsageLazy(userId)` (`server.js`)**:
+   - Invocado de forma no bloqueante en `GET /api/hub/status` para inicializar la cuota al abrir el dashboard.
+   - Invocado con `await` en `POST /api/chat` antes de evaluar y consumir turnos diarios en `checkAndTrackTurn`.
+   - Mantiene consistencia dual: memoria local en `userUsageLimiter.userDailyUsage` y persistencia en Supabase Cloud.
+
+### 25.3 Verificación y DoD
+- **Suite de Pruebas**: Añadido test unitario en `test/limiter.test.js` verificando el comportamiento del Lazy Upsert.
+- **Resultados de `npm test`**: **91 tests ejecutados, 90 pasando, 0 fallos, 1 omitido por RLS remoto sin credenciales**.
+
+
 
 

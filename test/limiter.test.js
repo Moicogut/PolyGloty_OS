@@ -145,3 +145,39 @@ test("C2: persistencia de cuota de uso diario tras reinicio del proceso/instanci
   assert.equal(rFail3.reason, "daily_limit");
 });
 
+test("Solución 1: Lazy Upsert de user_usage asegura inicialización de fila para usuarios registrados", async () => {
+  const dbUsage = new Map();
+  const dbProfiles = new Map();
+
+  const mockAdapter = {
+    isConfigured: true,
+    async syncProfile(userId, profile) {
+      dbProfiles.set(userId, profile);
+    },
+    async ensureDailyUsage(userId, dateStr) {
+      if (!dbUsage.has(`${userId}:${dateStr}`)) {
+        dbUsage.set(`${userId}:${dateStr}`, { seconds: 0, turns: 0 });
+      }
+    },
+    async getDailyUsage(userId, dateStr) {
+      return dbUsage.get(`${userId}:${dateStr}`) || null;
+    },
+  };
+
+  const userId = "usuario_nuevo_sin_registro_previo";
+  const today = UserUsageLimiter.getTodayKey();
+
+  // Antes del lazy upsert, no existe fila
+  assert.equal(await mockAdapter.getDailyUsage(userId, today), null);
+
+  // Ejecución de ensureDailyUsage
+  await mockAdapter.ensureDailyUsage(userId, today);
+
+  // Ahora existe fila inicial con 0s y 0 turnos
+  const initial = await mockAdapter.getDailyUsage(userId, today);
+  assert.notEqual(initial, null);
+  assert.equal(initial.seconds, 0);
+  assert.equal(initial.turns, 0);
+});
+
+

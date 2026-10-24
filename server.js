@@ -115,6 +115,25 @@ const resolveTenantStore = (req, url) => {
   const fromQuery = url?.searchParams?.get("user_id") || url?.searchParams?.get("tenant_id");
   return repo.getStore(fromHeader || fromQuery || "default");
 };
+
+// Función de respaldo (Lazy Upsert) para asegurar que el usuario tenga su fila en user_usage para CURRENT_DATE
+export async function ensureUserUsageLazy(userId) {
+  if (!userId || userId === "default") return;
+  const today = UserUsageLimiter.getTodayKey();
+  // 1. Respaldo en almacén local en memoria
+  let daily = userUsageLimiter.userDailyUsage.get(userId);
+  if (!daily || daily.date !== today) {
+    userUsageLimiter.userDailyUsage.set(userId, { date: today, turns: 0, seconds: 0 });
+  }
+  // 2. Respaldo en Supabase Cloud
+  if (supabase.isConfigured) {
+    try {
+      await supabase.ensureDailyUsage(userId, today);
+    } catch (err) {
+      logger.warn("lazy_upsert_usage_failed", { userId, error: err.message });
+    }
+  }
+}
 const PUB = path.join(ROOT, "public");
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -173,8 +192,12 @@ const routes = {
     });
   },
 
-  "GET /api/hub/status": (req, res, url) => {
+  "GET /api/hub/status": async (req, res, url) => {
     const state = resolveTenantStore(req, url);
+    const userId = req.headers["x-user-id"] || req.headers["x-tenant-id"] || state.tenantId;
+    if (userId && userId !== "default") {
+      ensureUserUsageLazy(userId).catch(() => {});
+    }
     const selectedLang = lang(url.searchParams.get("lang"));
     const hubStatus = getStudentHubStatus({
       state,
@@ -729,6 +752,10 @@ const routes = {
     }
 
     const state = resolveTenantStore(req, url);
+    const userId = req.headers["x-user-id"] || req.headers["x-tenant-id"] || state.tenantId;
+    if (userId && userId !== "default") {
+      await ensureUserUsageLazy(userId);
+    }
 
     // Verificación de límites por usuario (turnos por minuto y cuota diaria configurable guardada en Supabase)
     const limitCheck = await userUsageLimiter.checkAndTrackTurn(state.tenantId);
