@@ -339,3 +339,66 @@ En esta entrega se resolvió el desajuste pedagógico observado en producción (
   - `wetty_mobile_modal_1792817077690.png` (Modal curricular y desglose de competencias).
 - **Despliegue Continuo**: Commit `8b242a6` subido a GitHub `main` para despliegue automatizado en Render.
 
+---
+
+## 18. Plan Maestro: Personalización E2E, Currículum por Créditos y Suficiencia Auditada
+
+Se formuló, estructuró y persistió el Plan Director Integral para los 3 pilares estratégicos solicitados:
+1. **Personalización E2E, Auth Wall y Pre-sesión Warm-up**:
+   - Landing page oscura de alta conversión con showcase interactivo de Wetty y comparativa de metodologías.
+   - Auth Wall estricto (`user_id = auth.uid()`), protegiendo la inmersión conversacional contra accesos anónimos.
+   - Student Hub con métricas en tiempo real (nivel, créditos, racha, radar 4D de competencias y retos diarios).
+   - Pre-sesión de Warm-up Booster (90 segundos de active recall con 3 tarjetas prioritarias del mazo SRS) antes del diálogo en vivo con Wetty.
+2. **Estructura Curricular por Créditos y Libro Oficial de Estudio**:
+   - Sistema formal de 36 créditos por nivel CEFR (3 módulos de 12 créditos; lecciones de 2 créditos).
+   - Documento canónico *Polyglot Curriculum Handbook* (guía oficial con descriptores Can-Do, corpus gramatical contrastivo, listas de colocaciones IPA y diálogos modelo anotados).
+3. **Módulo de Pruebas de Suficiencia Auditadas (Oral + Escrito)**:
+   - Examen adaptativo trifásico de 15 minutos: Fase A (Cloze Test adaptativo CAT), Fase B (Redacción auditada con rúbrica CEFR) y Fase C (Entrevista oral no guionada con Wetty como examinadora).
+   - Registro inmutable en `proficiency_audits` con desglose multidimensional de 0 a 100 y emisión de Certificado Digital con código único de verificación.
+- **Documentos Generados en Carpeta**:
+   - `PLAN_MAESTRO_PERSONALIZACION_CURRICULUM_SUFICIENCIA.md` (27.5 KB)
+   - `PLAN_MAESTRO_PERSONALIZACION_CURRICULUM_SUFICIENCIA.pdf` (563.5 KB)
+
+---
+
+## 19. Fase 1: Personalización E2E, Auth Wall, Student Hub y Pre-sesión Warm-up (Completada y Verificada)
+
+Se implementó y verificó de extremo a extremo la Fase 1 del Plan Maestro:
+
+### 19.1 Arquitectura Backend y Aislamiento Multi-Tenant
+- **Servicio Central (`lib/hubService.js`)**:
+  - `getStudentHubStatus({ state, lang, user, now })`: Consolida el nivel activo, cálculo de créditos (X / 36), porcentaje de avance, racha, radar de competencias 4D (gramática, vocabulario, fluidez, comprensión), retos diarios/semanales con recompensa XP, cita motivadora situacional y lección curricular recomendada.
+  - `generateWarmup({ state, lang, level, lessonId })`: Genera 3 micro-retos pedagógicos basados en la lección objetivo (Active Recall léxico, Repair sintáctico con errores contrastivos típicos español-idioma meta, y Anticipación comunicativa) con explicaciones gramaticales y audio modelo.
+  - `completeWarmup({ state, now })`: Otorga +10 XP inmediatos, incrementa la racha y marca `warmupDone = true`.
+- **Validación Defensiva (`lib/validator.js`)**:
+  - `validateWarmupGeneratePayload(body)` y `validateWarmupCompletePayload(body)` con saneamiento estricto de tipos y longitudes máximas.
+- **Rutas HTTP (`server.js`)**:
+  - `GET /api/hub/status`: Estado del estudiante autenticado.
+  - `POST /api/warmup/generate`: Generación del paquete de pre-sesión.
+  - `POST /api/warmup/complete`: Consolidación y recompensa de XP.
+  - Aislamiento multi-tenant estricto mediante `resolveTenantStore(req, url)` extrayendo `user_id` / `tenant_id` y control `sameOrigin` de cabeceras.
+
+### 19.2 Frontend Reactivo y Experiencia de Usuario
+- **Landing Page de Alta Conversión (`#landingView`)**:
+  - Hero visual con insignia CEFR/HSK, titular motivador, botón interactivo de muestra de voz de Wetty (`🔊 Escuchar voz`), tabla comparativa de valor (*Polyglot Voice vs Apps Tradicionales*) y 3 tarjetas de pilares pedagógicos.
+- **Auth Wall Estricto**:
+  - Los visitantes sin sesión activa son redirigidos automáticamente al Landing Page; la barra inferior de navegación y el chat del tutor permanecen bloqueados y ocultos hasta la autenticación.
+- **Student Hub (`#hubView`)**:
+  - Tarjeta de progreso con créditos acumulados (X / 36) y barra porcentual.
+  - Radar de competencias 4D y contador de racha diaria.
+  - Módulo "Próxima Lección en Foco" con botón directo `[ ⚡ Iniciar Pre-sesión y Lección → ]`.
+  - Lista de retos diarios y semanales con barras de cumplimiento.
+- **Pre-sesión Warm-up Booster (`#warmupModal`)**:
+  - Interfaz modal de 3 pasos (90 segundos) con barra de progreso, micro-retos con retroalimentación instantánea, pronunciación modelo en voz nativa, felicitación con acreditación de +10 XP y transición fluida a la sesión conversacional con Wetty en el escenario objetivo.
+
+### 19.3 Evidencia de Verificación y DoD
+- **Batería de Pruebas Automatizadas**:
+  - `test/hub_warmup.test.js`: 3 tests unitarios cubriendo `getStudentHubStatus`, `generateWarmup` y `completeWarmup` (**100% pasando**).
+  - `npm test`: **65 tests ejecutados, 64 aprobados, 0 fallos, 1 omitido defensivamente (RLS remoto)**. Latencia sostenida en ~1474 ms.
+- **Verificación Visual E2E en Navegador**:
+  - Subagente de navegador ejecutó el flujo completo: navegación de visitante -> Landing Page -> Modal de Login (`estudiante.demo@polyglot.ai`) -> Student Hub con A1 (0/36 créditos) -> Warm-up Booster (3 preguntas respondidas) -> Premiación +10 XP -> Transición a tutor conversacional.
+  - Grabación completa de la sesión: `fase1_hub_warmup_flow_1792855973283.webp`.
+  - Capturas registradas: `landing_page_1792855984835.png`, `auth_modal_opened_1792855999507.png`, `student_hub_view_1792856054307.png`, `warmup_modal_opened_1792856159624.png`, `tutor_chat_view_1792856599392.png`.
+
+
+

@@ -1319,84 +1319,257 @@ $("#searchVocabInput")?.addEventListener("input", (e) => {
   renderSavedVocabList(filtered);
 });
 
-// ---------------------------------------------------------------- modal de usuario / auth
-let authMode = "login";
+// ==========================================================================
+// CONTROLADOR DEL STUDENT HUB Y PRE-SESIÓN WARM-UP (FASE 1)
+// ==========================================================================
 
-function openAuthModal() {
-  const modal = $("#authModal");
+let currentWarmupData = null;
+let currentWarmupIndex = 0;
+let currentWarmupLessonId = "cafe";
+
+async function loadAndRenderHub() {
+  if (!currentUser) return;
+  try {
+    const data = await api(`/api/hub/status?lang=${lang()}`);
+    if (!data || !data.ok) return;
+
+    const u = data.user;
+    if ($("#hubUserGreeting")) {
+      $("#hubUserGreeting").textContent = `¡Hola, ${u.name}!`;
+    }
+    if ($("#hubLevelChip")) {
+      $("#hubLevelChip").textContent = `Nivel ${u.level} · ${u.levelName || "Acceso"}`;
+    }
+    if ($("#hubMotivationalQuote")) {
+      $("#hubMotivationalQuote").textContent = `"${data.motivationalQuote}"`;
+    }
+
+    if ($("#hubCreditsNum")) {
+      $("#hubCreditsNum").textContent = `${u.credits} / ${u.targetCredits}`;
+    }
+    if ($("#hubCreditsProgress")) {
+      $("#hubCreditsProgress").style.width = `${u.levelProgress}%`;
+    }
+    if ($("#hubCreditsSubtext")) {
+      const remaining = Math.max(0, u.targetCredits - u.credits);
+      $("#hubCreditsSubtext").textContent = remaining === 0
+        ? "¡Créditos completados! Prueba de suficiencia lista."
+        : `${remaining} créditos restantes para el Examen de Suficiencia`;
+    }
+
+    if ($("#hubStreakVal")) {
+      $("#hubStreakVal").textContent = `${u.streak} ${u.streak === 1 ? "día" : "días"}`;
+    }
+    if ($("#hubTotalXp")) {
+      $("#hubTotalXp").textContent = `⭐ ${u.xp} XP`;
+    }
+    if ($("#hubTotalCards")) {
+      $("#hubTotalCards").textContent = `📚 ${u.totalCards} en SRS`;
+    }
+
+    // Radar de competencias (CEFR)
+    const r = data.radar || {};
+    if ($("#radarCompFill")) $("#radarCompFill").style.width = `${r.comprehension || 0}%`;
+    if ($("#radarCompVal")) $("#radarCompVal").textContent = `${r.comprehension || 0}%`;
+
+    if ($("#radarFluencyFill")) $("#radarFluencyFill").style.width = `${r.fluency || 0}%`;
+    if ($("#radarFluencyVal")) $("#radarFluencyVal").textContent = `${r.fluency || 0}%`;
+
+    if ($("#radarGrammarFill")) $("#radarGrammarFill").style.width = `${r.grammar || 0}%`;
+    if ($("#radarGrammarVal")) $("#radarGrammarVal").textContent = `${r.grammar || 0}%`;
+
+    if ($("#radarVocabFill")) $("#radarVocabFill").style.width = `${r.vocabulary || 0}%`;
+    if ($("#radarVocabVal")) $("#radarVocabVal").textContent = `${r.vocabulary || 0}%`;
+
+    // Próxima lección curricular en foco
+    const nextL = data.nextLesson;
+    if (nextL) {
+      if ($("#hubNextLessonTitle")) $("#hubNextLessonTitle").textContent = nextL.title;
+      if ($("#hubNextLessonModule")) $("#hubNextLessonModule").textContent = nextL.module;
+      if ($("#hubNextLessonScene")) $("#hubNextLessonScene").textContent = nextL.scene;
+
+      const startBtn = $("#hubStartLessonWarmupBtn");
+      if (startBtn) {
+        startBtn.onclick = () => startWarmupForLesson(nextL.id);
+      }
+    }
+
+    // Retos del día y la semana
+    const challengesList = $("#hubChallengesList");
+    if (challengesList && Array.isArray(data.challenges)) {
+      challengesList.innerHTML = "";
+      data.challenges.forEach((ch) => {
+        const row = el("div", `challenge-row ${ch.done ? "completed" : ""}`);
+        row.innerHTML = `
+          <div class="challenge-left">
+            <span class="challenge-icon">${ch.done ? "✅" : "🎯"}</span>
+            <div>
+              <div class="challenge-title">${ch.title}</div>
+              <div class="challenge-desc">${ch.desc} (${ch.have}/${ch.need})</div>
+            </div>
+          </div>
+          <div class="challenge-reward">+${ch.xp} XP</div>
+        `;
+        challengesList.appendChild(row);
+      });
+    }
+  } catch (err) {
+    console.error("Error al cargar estado del Hub:", err);
+  }
+}
+
+async function startWarmupForLesson(lessonId) {
+  currentWarmupLessonId = lessonId || "cafe";
+  const modal = $("#warmupModal");
   if (!modal) return;
   modal.hidden = false;
-  const errEl = $("#authError");
-  if (errEl) errEl.textContent = "";
 
-  if (currentUser) {
-    $("#authLoggedInView").hidden = false;
-    $("#authLoggedOutView").hidden = true;
-    $("#userProfileEmail").textContent = currentUser.email || "Usuario activo";
-    $("#userProfileId").textContent = `ID de sesión: ${currentUser.id} · Modo: ${currentUser.provider || "local"}`;
-  } else {
-    $("#authLoggedInView").hidden = true;
-    $("#authLoggedOutView").hidden = false;
+  const challengeBody = $("#warmupChallengeBody");
+  const completeView = $("#warmupCompleteView");
+  const nextBtn = $("#warmupNextBtn");
+
+  if (challengeBody) challengeBody.hidden = false;
+  if (completeView) completeView.hidden = true;
+  if (nextBtn) {
+    nextBtn.parentElement.hidden = false;
+    nextBtn.disabled = true;
+    nextBtn.textContent = "Continuar →";
   }
-}
-
-function closeAuthModal() {
-  if ($("#authModal")) $("#authModal").hidden = true;
-}
-
-$("#authBtn")?.addEventListener("click", openAuthModal);
-$("#closeAuthModal")?.addEventListener("click", closeAuthModal);
-$("#themeToggleBtn")?.addEventListener("click", () => {
-  const nextTheme = currentTheme === "light" ? "dark" : "light";
-  applyTheme(nextTheme);
-  toast(`Modo cambiado a: ${nextTheme === "light" ? "Visión Clara (Día) ☀️" : "Visión Oscura (Noche) 🌙"}`);
-});
-
-$("#tabLogin")?.addEventListener("click", () => {
-  authMode = "login";
-  $("#tabLogin").classList.add("active");
-  $("#tabRegister").classList.remove("active");
-  $("#authSubmitBtn").textContent = "Ingresar";
-  const errEl = $("#authError");
-  if (errEl) errEl.textContent = "";
-});
-
-$("#tabRegister")?.addEventListener("click", () => {
-  authMode = "register";
-  $("#tabRegister").classList.add("active");
-  $("#tabLogin").classList.remove("active");
-  $("#authSubmitBtn").textContent = "Crear Cuenta";
-  const errEl = $("#authError");
-  if (errEl) errEl.textContent = "";
-});
-
-$("#authForm")?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = $("#authEmail").value.trim();
-  const password = $("#authPassword").value;
-  const errEl = $("#authError");
-  if (errEl) errEl.textContent = "";
 
   try {
-    const endpoint = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
-    const res = await post(endpoint, { email, password });
-    currentUser = res;
-    store.set("polyglot_user", JSON.stringify(currentUser));
-    toast(authMode === "register" ? "¡Cuenta registrada exitosamente!" : "¡Bienvenido de vuelta!");
-    closeAuthModal();
-    await refresh();
+    const res = await post("/api/warmup/generate", {
+      lang: lang(),
+      level: $("#level")?.value || "A1",
+      lessonId: currentWarmupLessonId,
+    });
+    if (!res || !res.ok) throw new Error("No se pudo generar el calentamiento");
+    currentWarmupData = res;
+    currentWarmupIndex = 0;
+    renderWarmupStep();
   } catch (err) {
-    if (errEl) errEl.textContent = err.message || "Error al autenticar";
+    toast("Error al iniciar pre-sesión: " + err.message);
+    modal.hidden = true;
   }
-});
+}
 
-$("#logoutBtn")?.addEventListener("click", async () => {
-  currentUser = null;
-  store.set("polyglot_user", "");
-  toast("Sesión cerrada");
-  closeAuthModal();
-  await refresh();
-});
+function renderWarmupStep() {
+  if (!currentWarmupData || !currentWarmupData.questions) return;
+  const questions = currentWarmupData.questions;
+  const q = questions[currentWarmupIndex];
+  if (!q) return;
+
+  const stepIndicator = $("#warmupStepIndicator");
+  if (stepIndicator) stepIndicator.textContent = `Paso ${currentWarmupIndex + 1} de ${questions.length}`;
+
+  const progress = Math.round(((currentWarmupIndex + 1) / questions.length) * 100);
+  const progressBar = $("#warmupProgressBar");
+  if (progressBar) progressBar.style.width = `${progress}%`;
+
+  const promptEl = $("#warmupPrompt");
+  if (promptEl) promptEl.textContent = q.prompt;
+
+  const optionsContainer = $("#warmupOptions");
+  if (optionsContainer) {
+    optionsContainer.innerHTML = "";
+    q.options.forEach((optText, idx) => {
+      const btn = el("button", "warmup-opt-btn");
+      btn.type = "button";
+      btn.innerHTML = `<span>${optText}</span>`;
+      btn.addEventListener("click", () => handleWarmupAnswer(idx, q));
+      optionsContainer.appendChild(btn);
+    });
+  }
+
+  const feedbackEl = $("#warmupFeedback");
+  if (feedbackEl) {
+    feedbackEl.hidden = true;
+    feedbackEl.innerHTML = "";
+  }
+
+  const nextBtn = $("#warmupNextBtn");
+  if (nextBtn) {
+    nextBtn.disabled = true;
+  }
+}
+
+function handleWarmupAnswer(selectedIdx, question) {
+  const optionsContainer = $("#warmupOptions");
+  if (!optionsContainer) return;
+  const buttons = optionsContainer.querySelectorAll(".warmup-opt-btn");
+  buttons.forEach((b) => (b.disabled = true));
+
+  const isCorrect = selectedIdx === question.answer;
+  if (buttons[selectedIdx]) {
+    buttons[selectedIdx].classList.add(isCorrect ? "correct" : "wrong");
+  }
+  if (!isCorrect && buttons[question.answer]) {
+    buttons[question.answer].classList.add("correct");
+  }
+
+  const feedbackEl = $("#warmupFeedback");
+  if (feedbackEl) {
+    feedbackEl.hidden = false;
+    feedbackEl.innerHTML = `
+      <div style="font-weight: 700; color: ${isCorrect ? "#10b981" : "#f59e0b"}; margin-bottom: 4px;">
+        ${isCorrect ? "¡Excelente! Acertaste." : "Ojo a la forma estándar:"}
+      </div>
+      <div>${question.explanation}</div>
+      ${question.speak ? `
+        <button type="button" class="dock-pill-btn small" id="warmupSpeakBtn" style="margin-top: 8px; font-size: 11px;">
+          🔊 Escuchar modelo: "${question.speak}"
+        </button>
+      ` : ""}
+    `;
+
+    if (question.speak) {
+      feedbackEl.querySelector("#warmupSpeakBtn")?.addEventListener("click", () => {
+        speakVoice(question.speak);
+      });
+    }
+  }
+
+  const nextBtn = $("#warmupNextBtn");
+  if (nextBtn) {
+    nextBtn.disabled = false;
+    nextBtn.textContent = currentWarmupIndex === currentWarmupData.questions.length - 1
+      ? "Finalizar Calentamiento ✨"
+      : "Siguiente Pregunta →";
+  }
+}
+
+async function onWarmupNextClick() {
+  if (!currentWarmupData) return;
+  if (currentWarmupIndex < currentWarmupData.questions.length - 1) {
+    currentWarmupIndex++;
+    renderWarmupStep();
+  } else {
+    // Calentamiento completado: registrar y premiar XP
+    try {
+      const res = await post("/api/warmup/complete", {
+        warmupId: currentWarmupData.warmupId,
+        answers: [],
+      });
+      if (res && res.ok) {
+        toast("🎉 ¡Pre-sesión superada! +10 XP");
+        if (S) {
+          S.xp = res.newTotalXp;
+          paint();
+        }
+      }
+    } catch (e) {
+      console.warn("Error al registrar completion de warmup:", e);
+    }
+
+    const challengeBody = $("#warmupChallengeBody");
+    const completeView = $("#warmupCompleteView");
+    const nextBtn = $("#warmupNextBtn");
+
+    if (challengeBody) challengeBody.hidden = true;
+    if (completeView) completeView.hidden = false;
+    if (nextBtn) nextBtn.parentElement.hidden = true;
+  }
+}
+
 
 // ---------------------------------------------------------------- evaluación y competencias
 function renderCompetencies() {
@@ -1495,14 +1668,48 @@ function paintProgress() {
 }
 
 // ---------------------------------------------------------------- tabs & bottom nav
-function switchTab(t) {
-  document.querySelectorAll(".tabs button, .bottom-nav button").forEach((x) => {
-    const isSelected = x.dataset.tab === t;
+function switchTab(target) {
+  let t = target;
+  if (!currentUser) {
+    t = "landingView";
+  } else if (!t || t === "landingView" || t === "landing") {
+    t = "hubView";
+  } else if (t === "hub") {
+    t = "hubView";
+  }
+
+  // Actualizar visibilidad del Header según autenticación
+  const headerUserStats = $("#headerUserStats");
+  const headerGuestActions = $("#headerGuestActions");
+  const mainBottomNav = $("#mainBottomNav");
+
+  if (!currentUser) {
+    if (headerUserStats) headerUserStats.style.display = "none";
+    if (headerGuestActions) headerGuestActions.style.display = "flex";
+    if (mainBottomNav) mainBottomNav.style.display = "none";
+  } else {
+    if (headerUserStats) headerUserStats.style.display = "flex";
+    if (headerGuestActions) headerGuestActions.style.display = "none";
+    if (mainBottomNav) mainBottomNav.style.display = "flex";
+  }
+
+  // Actualizar pestañas activas en la barra inferior
+  document.querySelectorAll(".bottom-nav button, .tabs button").forEach((x) => {
+    const tabKey = x.dataset.tab;
+    const isSelected = (tabKey === t) || (tabKey === "hub" && t === "hubView");
     x.setAttribute("aria-selected", isSelected ? "true" : "false");
     if (isSelected) x.classList.add("active");
     else x.classList.remove("active");
   });
-  document.querySelectorAll("main section").forEach((s) => (s.hidden = s.id !== t));
+
+  // Mostrar u ocultar secciones en main
+  document.querySelectorAll("main section").forEach((s) => {
+    const shouldShow = (s.id === t);
+    s.style.display = shouldShow ? "block" : "none";
+    s.hidden = !shouldShow;
+  });
+
+  if (t === "hubView") loadAndRenderHub();
   if (t === "review") loadReview();
   if (t === "tones") loadDrills();
   if (t === "progress") paintProgress();
@@ -1526,6 +1733,9 @@ async function refresh() {
   paint();
   paintProgress();
   renderSessionVocab();
+  if (currentUser) {
+    loadAndRenderHub();
+  }
   if (status() === "Despertando el tutor, un momento…") {
     status("Listo: presiona 'Empezar' para abrir la sesión.");
   }
@@ -1568,6 +1778,75 @@ async function init() {
       txt.removeAttribute("disabled");
       txt.focus();
     }
+  });
+
+  // Eventos de Landing Page y Auth Wall
+  $("#landingStartBtn")?.addEventListener("click", () => {
+    authMode = "register";
+    updateAuthModalUI();
+    const modal = $("#authModal");
+    if (modal) modal.hidden = false;
+  });
+
+  $("#landingLoginBtn")?.addEventListener("click", () => {
+    authMode = "login";
+    updateAuthModalUI();
+    const modal = $("#authModal");
+    if (modal) modal.hidden = false;
+  });
+
+  $("#guestLoginBtn")?.addEventListener("click", () => {
+    authMode = "login";
+    updateAuthModalUI();
+    const modal = $("#authModal");
+    if (modal) modal.hidden = false;
+  });
+
+  $("#guestRegisterBtn")?.addEventListener("click", () => {
+    authMode = "register";
+    updateAuthModalUI();
+    const modal = $("#authModal");
+    if (modal) modal.hidden = false;
+  });
+
+  $("#landingListenSampleBtn")?.addEventListener("click", () => {
+    speakVoice("Hello! Welcome to Polyglot Voice. Don't worry about making mistakes — together we will turn them into natural confidence.");
+  });
+
+  // Botones de navegación del Student Hub
+  $("#hubGoToSpeakBtn")?.addEventListener("click", () => {
+    switchTab("speak");
+  });
+
+  $("#backToHubBtn")?.addEventListener("click", () => {
+    switchTab("hubView");
+  });
+
+  $("#hubViewProgressBtn")?.addEventListener("click", () => {
+    switchTab("progress");
+  });
+
+  // Botones del Modal de Pre-sesión Warm-up
+  $("#closeWarmupModal")?.addEventListener("click", () => {
+    const modal = $("#warmupModal");
+    if (modal) modal.hidden = true;
+  });
+
+  $("#warmupNextBtn")?.addEventListener("click", onWarmupNextClick);
+
+  $("#warmupEnterLessonBtn")?.addEventListener("click", () => {
+    const modal = $("#warmupModal");
+    if (modal) modal.hidden = true;
+    const missionSel = $("#mission");
+    if (missionSel && currentWarmupLessonId) {
+      missionSel.value = currentWarmupLessonId;
+      onMissionChange();
+    }
+    switchTab("speak");
+    toast("🎙️ ¡Iniciando sesión conversacional con Wetty!");
+    setTimeout(() => {
+      connect();
+    }, 400);
   });
 
   // Eventos del Modal de Autenticación y Cuentas
@@ -1685,6 +1964,7 @@ async function init() {
       if (modal) modal.hidden = true;
       paint();
       await refresh();
+      switchTab("hubView");
     } catch (err) {
       if (errEl) errEl.textContent = err.message || "Ocurrió un error al procesar tu solicitud.";
     }
@@ -1698,6 +1978,7 @@ async function init() {
     if (modal) modal.hidden = true;
     paint();
     await refresh();
+    switchTab("landingView");
   });
 
   // Eventos de Lista de Espera de Chino
@@ -1722,6 +2003,9 @@ async function init() {
   });
 
   window.speechSynthesis?.getVoices();
+
+  // Iniciar en Landing (si no autenticado) o Hub (si autenticado)
+  switchTab(currentUser ? "hubView" : "landingView");
 }
 
 init();

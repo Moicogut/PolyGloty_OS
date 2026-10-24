@@ -15,7 +15,7 @@
     <div class="brand-icon">✨</div>
     <span class="brand-text">Polyglot</span>
   </div>
-  <div class="user-stats">
+  <div class="user-stats" id="headerUserStats">
     <div class="meter" aria-label="Nivel y experiencia">
       <b id="lv">Nv 1</b>
       <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"><i id="xb"></i></div>
@@ -32,9 +32,209 @@
       <span id="userAvatar">👤</span> <span id="userName" class="auth-name">Cuenta</span>
     </button>
   </div>
+  <!-- Acciones para visitantes no autenticados -->
+  <div class="guest-nav-actions" id="headerGuestActions" style="display: none;">
+    <button id="guestLoginBtn" type="button" class="guest-nav-btn login-btn">Iniciar Sesión</button>
+    <button id="guestRegisterBtn" type="button" class="guest-nav-btn register-btn">Registrarme</button>
+  </div>
 </header>
 
 <main>
+  <!-- SECCIÓN 0: LANDING PAGE ELEGANTE (VISITANTES / AUTH WALL) -->
+  <section id="landingView" class="landing-section">
+    <div class="landing-hero">
+      <div class="landing-badge">
+        <span class="pulse-sparkle">✨</span> Método Inmersivo por Competencias CEFR & HSK
+      </div>
+      <h1 class="landing-title">
+        Habla con fluidez real en inglés y mandarín con <span class="gradient-text">Wetty IA</span>
+      </h1>
+      <p class="landing-subtitle">
+        La primera plataforma de inmersión conversacional que escucha tu voz en tiempo real, modela la respuesta nativa con facilitación pedagógica inmediata y certifica tu progreso en créditos académicos auditables.
+      </p>
+
+      <div class="landing-cta-row">
+        <button id="landingStartBtn" type="button" class="landing-btn-primary">
+          <span>🚀 Comenzar Mi Aprendizaje</span>
+        </button>
+        <button id="landingLoginBtn" type="button" class="landing-btn-secondary">
+          <span>🔑 Ya tengo cuenta</span>
+        </button>
+      </div>
+
+      <!-- Demo interactiva del tutor con muestra de audio -->
+      <div class="landing-tutor-preview-card">
+        <div class="landing-preview-header">
+          <div class="tutor-avatar-wrap">
+            <img src="/wetty.jpg" alt="Wetty · Tutora de Inglés" class="tutor-avatar-img">
+            <div class="tutor-pulse-ring"></div>
+          </div>
+          <div class="landing-tutor-info">
+            <div class="landing-tutor-name">Wetty · Tutora de Inglés</div>
+            <div class="landing-tutor-role">Especialista en Fluidez Oral y Reducción del Filtro Afectivo</div>
+          </div>
+          <button id="landingListenSampleBtn" type="button" class="landing-audio-sample-btn" title="Escuchar muestra de pronunciación nativa">
+            <span>🔊</span> <span class="sample-btn-lbl">Escuchar voz</span>
+          </button>
+        </div>
+        <div class="landing-chat-bubble">
+          "Hello! Welcome to Polyglot Voice. Don't worry about making mistakes — together we will turn them into natural confidence. Are you ready for your first conversation?"
+          <div class="landing-bubble-trans">"¡Hola! Bienvenido a Polyglot Voice. No te preocupes por cometer errores: juntos los transformaremos en confianza nativa. ¿Estás listo para tu primera conversación?"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparativa Metodológica -->
+    <div class="landing-method-section">
+      <h2 class="landing-section-title">¿Por qué Polyglot Voice funciona donde otras apps fallan?</h2>
+      <div class="comparison-grid">
+        <div class="comparison-card comp-card-old">
+          <div class="comp-header-bad">❌ Aplicaciones Tradicionales</div>
+          <ul class="comp-list">
+            <li>Memorización de vocabulario aislado y tarjetas estériles.</li>
+            <li>Ejercicios pasivos de opción múltiple sin hablar.</li>
+            <li>No preparan para la conversación situacional real.</li>
+            <li>Sin retroalimentación de cómo lo diría un nativo.</li>
+          </ul>
+        </div>
+        <div class="comparison-card comp-card-polyglot">
+          <div class="comp-header-good">✨ Polyglot Voice (Wetty)</div>
+          <ul class="comp-list">
+            <li>Inmersión conversacional bidireccional por voz en tiempo real (~1.4s).</li>
+            <li>Facilitador Pedagógico contrastivo: regla en español + alternativa nativa.</li>
+            <li>Pre-sesión Warm-up para activar memoria de trabajo antes de hablar.</li>
+            <li>Currículum modular de 36 créditos auditables con certificado oficial.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Pilares Científicos -->
+    <div class="landing-features-grid">
+      <div class="landing-feat-card">
+        <div class="feat-icon">🎙️</div>
+        <h3>Inmersión Conversacional Dual</h3>
+        <p>Conversa por voz o texto con tutores que adaptan su velocidad y complejidad sintáctica a tu nivel CEFR (A1–C1) o HSK (1–3).</p>
+      </div>
+      <div class="landing-feat-card">
+        <div class="feat-icon">🧠</div>
+        <h3>Active Recall & Warm-up</h3>
+        <p>Pre-sesión de 90 segundos que reactiva tu memoria antes de cada lección, eliminando la sobrecarga cognitiva y la ansiedad.</p>
+      </div>
+      <div class="landing-feat-card">
+        <div class="feat-icon">🏆</div>
+        <h3>Créditos y Suficiencia Auditada</h3>
+        <p>36 créditos acumulativos por nivel y exámenes adaptativos auditados en escritura y habla para validar tu verdadero nivel.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECCIÓN 1: STUDENT HUB / DASHBOARD MOTIVACIONAL (USUARIO AUTENTICADO) -->
+  <section id="hubView" class="student-hub-section" style="display: none;">
+    <!-- Banner de Bienvenida y Autoeficacia -->
+    <div class="hub-welcome-banner">
+      <div class="hub-welcome-left">
+        <div class="hub-greeting-row">
+          <h2 id="hubUserGreeting">¡Bienvenido de vuelta!</h2>
+          <span class="hub-level-chip" id="hubLevelChip">Nivel A1 · Principiante</span>
+        </div>
+        <p id="hubMotivationalQuote" class="hub-quote-text">
+          Cargando tu progreso motivacional...
+        </p>
+      </div>
+      <div class="hub-welcome-actions">
+        <button id="hubGoToSpeakBtn" type="button" class="primary hub-talk-btn">
+          <span>🎙️</span> <span>Entrar al Tutor</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Grid de Métricas Principales -->
+    <div class="hub-metrics-grid">
+      <!-- Tarjeta 1: Créditos y Nivel -->
+      <div class="hub-metric-card">
+        <div class="hub-card-header">
+          <span>🎓 Créditos Académicos</span>
+          <b id="hubCreditsNum" class="metric-highlight">0 / 36</b>
+        </div>
+        <div class="meter-bar-track">
+          <div id="hubCreditsProgress" class="meter-bar-fill" style="width: 0%;"></div>
+        </div>
+        <small id="hubCreditsSubtext" class="muted">36 créditos requeridos para el Examen de Suficiencia</small>
+      </div>
+
+      <!-- Tarjeta 2: Racha y Experiencia -->
+      <div class="hub-metric-card">
+        <div class="hub-card-header">
+          <span>🔥 Constancia & Racha</span>
+          <b id="hubStreakVal" class="metric-highlight">0 días</b>
+        </div>
+        <div class="hub-stat-subrow">
+          <span id="hubTotalXp">⭐ 0 XP</span>
+          <span id="hubTotalCards">📚 0 en SRS</span>
+        </div>
+        <small class="muted">La constancia diaria entrena la fluidez refleja.</small>
+      </div>
+
+      <!-- Tarjeta 3: Radar de Competencias -->
+      <div class="hub-metric-card hub-radar-card">
+        <div class="hub-card-header">
+          <span>📊 Estado de Competencias (CEFR)</span>
+          <button id="hubViewProgressBtn" type="button" class="link-vocab-btn small">Ver detalles →</button>
+        </div>
+        <div class="hub-radar-bars">
+          <div class="radar-bar-item">
+            <span class="radar-label">Comprensión</span>
+            <div class="radar-track"><div id="radarCompFill" class="radar-fill" style="width: 70%;"></div></div>
+            <b id="radarCompVal">70%</b>
+          </div>
+          <div class="radar-bar-item">
+            <span class="radar-label">Fluidez</span>
+            <div class="radar-track"><div id="radarFluencyFill" class="radar-fill" style="width: 60%;"></div></div>
+            <b id="radarFluencyVal">60%</b>
+          </div>
+          <div class="radar-bar-item">
+            <span class="radar-label">Gramática</span>
+            <div class="radar-track"><div id="radarGrammarFill" class="radar-fill" style="width: 65%;"></div></div>
+            <b id="radarGrammarVal">65%</b>
+          </div>
+          <div class="radar-bar-item">
+            <span class="radar-label">Vocabulario</span>
+            <div class="radar-track"><div id="radarVocabFill" class="radar-fill" style="width: 70%;"></div></div>
+            <b id="radarVocabVal">70%</b>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Próxima Lección Curricular en Foco -->
+    <div class="hub-lesson-focus-card">
+      <div class="focus-card-badge">🎯 PRÓXIMO HITO CURRICULAR (2 CRÉDITOS)</div>
+      <div class="focus-card-main">
+        <div class="focus-card-info">
+          <h3 id="hubNextLessonTitle">Lección 1: En la Cafetería</h3>
+          <p id="hubNextLessonModule" class="muted small">Módulo 1: Primeros Contactos</p>
+          <p id="hubNextLessonScene" class="focus-scene-desc">
+            Eres un cliente en una cafetería. Pide tu bebida favorita, consulta el precio y da las gracias cordialmente.
+          </p>
+        </div>
+        <div class="focus-card-action">
+          <button id="hubStartLessonWarmupBtn" type="button" class="primary start-warmup-btn">
+            <span>⚡ Iniciar Pre-sesión y Lección →</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Retos del Día y la Semana -->
+    <div class="hub-challenges-box">
+      <h3>🎯 Retos Pendientes</h3>
+      <div class="challenges-list" id="hubChallengesList">
+        <!-- Renderizado dinámico desde hubService -->
+      </div>
+    </div>
+  </section>
+
   <!-- TAB 1: HABLAR (ESTILO PRAKTIKA CON TUTOR AVATAR) -->
   <section id="speak" class="panel panel-speak">
     <!-- Header compacto del Tutor estilo Praktika -->
@@ -55,6 +255,9 @@
         </div>
       </div>
       <div class="tutor-header-actions">
+        <button id="backToHubBtn" type="button" class="dock-pill-btn hub-return-btn" title="Volver al Hub del Alumno" style="margin-right: 6px;">
+          <span>🏠</span> <span class="btn-lbl">Hub</span>
+        </button>
         <button id="connect" class="primary start-session-btn" title="Iniciar o reconectar sesión">
           <span>▶</span> <span class="btn-lbl">Empezar Conversación</span>
         </button>
@@ -481,11 +684,57 @@
   </div>
 </div>
 
+<!-- MODAL DE PRE-SESIÓN DE REPASO (WARM-UP BOOSTER) -->
+<div id="warmupModal" class="modal-overlay" hidden>
+  <div class="modal-card warmup-modal-card">
+    <div class="warmup-modal-header">
+      <div class="warmup-pill-badge">⚡ Warm-up Booster</div>
+      <div class="warmup-step-indicator" id="warmupStepIndicator">Paso 1 de 3</div>
+      <button id="closeWarmupModal" type="button" class="modal-close">&times;</button>
+    </div>
+
+    <div class="warmup-progress-track">
+      <div id="warmupProgressBar" class="warmup-progress-fill" style="width: 33%;"></div>
+    </div>
+
+    <!-- Contenedor del Micro-Reto Activo -->
+    <div id="warmupChallengeBody" class="warmup-body">
+      <div id="warmupPrompt" class="warmup-prompt-text">
+        Cargando micro-reto pedagógico...
+      </div>
+      <div id="warmupOptions" class="warmup-options-grid"></div>
+      <div id="warmupFeedback" class="warmup-feedback-box" hidden></div>
+    </div>
+
+    <!-- Pantalla de Calentamiento Completado -->
+    <div id="warmupCompleteView" class="warmup-complete-view" hidden>
+      <div class="warmup-success-badge">🎉 +10 XP</div>
+      <h3 style="margin: 8px 0; font-size: 19px;">¡Memoria de Trabajo Activada!</h3>
+      <p class="muted small">
+        Superaste el calentamiento de 90 segundos. Tu cerebro ha precargado las colocaciones y estructuras para hablar con soltura.
+      </p>
+      <button id="warmupEnterLessonBtn" type="button" class="primary" style="width: 100%; padding: 14px; font-size: 15px; font-weight: 700; margin-top: 14px; border-radius: var(--radius-full);">
+        <span>🎙️ Entrar a la Lección con Wetty</span>
+      </button>
+    </div>
+
+    <div class="warmup-actions-footer" id="warmupActionsFooter">
+      <button id="warmupNextBtn" type="button" class="primary" disabled style="width: 100%; padding: 12px; font-size: 14px; border-radius: var(--radius-full);">
+        <span>Continuar →</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <!-- BARRA DE NAVEGACIÓN INFERIOR (Estilo App Nativa Praktika) -->
-<nav class="bottom-nav" role="tablist">
-  <button role="tab" data-tab="speak" aria-selected="true" class="bottom-nav-item active">
+<nav class="bottom-nav" id="mainBottomNav" role="tablist">
+  <button role="tab" data-tab="hub" aria-selected="true" class="bottom-nav-item active" id="tabNavHub">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Hub</span>
+  </button>
+  <button role="tab" data-tab="speak" aria-selected="false" class="bottom-nav-item" id="tabNavSpeak">
     <span class="nav-icon">🎙️</span>
     <span class="nav-label">Tutor</span>
   </button>

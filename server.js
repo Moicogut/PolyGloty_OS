@@ -5,10 +5,19 @@ import { fileURLToPath } from "node:url";
 import { openStore, TenantRepository, sanitizeTenantId } from "./lib/store.js";
 import { buildSession, buildGeminiSession, runTool, snapshot, MISSIONS, LANGS, award } from "./lib/tutor.js";
 import { schedule, dueQueue, preview, gradeFromTone } from "./lib/srs.js";
-import { validateGradePayload, validateDrillPayload, validateToolPayload, validateChatPayload, ValidationError } from "./lib/validator.js";
+import {
+  validateGradePayload,
+  validateDrillPayload,
+  validateToolPayload,
+  validateChatPayload,
+  validateWarmupGeneratePayload,
+  validateWarmupCompletePayload,
+  ValidationError,
+} from "./lib/validator.js";
 import { logger } from "./lib/logger.js";
 import { RateLimiter, UserUsageLimiter } from "./lib/limiter.js";
 import { SupabaseAdapter } from "./lib/supabase.js";
+import { getStudentHubStatus, generateWarmup, completeWarmup } from "./lib/hubService.js";
 import {
   buildPedagogicalSystemInstruction,
   adaptMissionForLevel,
@@ -126,6 +135,50 @@ const routes = {
         isDefault: state.tenantId === "default",
       },
     });
+  },
+
+  "GET /api/hub/status": (req, res, url) => {
+    const state = resolveTenantStore(req, url);
+    const selectedLang = lang(url.searchParams.get("lang"));
+    const hubStatus = getStudentHubStatus({
+      state,
+      lang: selectedLang,
+      user: {
+        id: state.tenantId,
+        email: state.data.profile?.email || null,
+      },
+    });
+    send(res, 200, { ok: true, ...hubStatus });
+  },
+
+  "POST /api/warmup/generate": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      const payload = validateWarmupGeneratePayload(b);
+      const state = resolveTenantStore(req, url);
+      const warmup = generateWarmup({
+        state,
+        lang: payload.lang,
+        level: payload.level,
+        lessonId: payload.lessonId,
+      });
+      send(res, 200, warmup);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al generar la pre-sesión de calentamiento" });
+    }
+  },
+
+  "POST /api/warmup/complete": async (req, res, url) => {
+    try {
+      const b = await json(req);
+      validateWarmupCompletePayload(b);
+      const state = resolveTenantStore(req, url);
+      const result = completeWarmup({ state });
+      logger.info("warmup_completed", { tenantId: state.tenantId, xpAwarded: result.xpAwarded });
+      send(res, 200, result);
+    } catch (err) {
+      send(res, 400, { error: err.message || "Error al registrar la culminación del calentamiento" });
+    }
   },
 
   "POST /api/auth/register": async (req, res, url) => {
