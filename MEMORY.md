@@ -663,6 +663,47 @@ En respuesta a la auditoría técnica de persistencia donde la tabla `public.use
 - **Suite de Pruebas**: Añadido test unitario en `test/limiter.test.js` verificando el comportamiento del Lazy Upsert.
 - **Resultados de `npm test`**: **91 tests ejecutados, 90 pasando, 0 fallos, 1 omitido por RLS remoto sin credenciales**.
 
+---
+
+## 26. Solución 2: Simplificación y Claridad del Student Hub (UX Optimization)
+
+Para erradicar la sobrecarga cognitiva al iniciar sesión y guiar al estudiante hacia su *Siguiente Mejor Acción* (Next Best Action) en menos de 3 segundos, se rediseñó la arquitectura de información y la jerarquía visual del frontend (`public/index.html`, `public/styles.css`, `public/app.js`).
+
+### 26.1 Hito Visual Principal (Hero Action Card)
+- **Contenedor de Alto Contraste**: Diseñado con gradiente profundo (`linear-gradient(135deg, rgba(30,27,75,0.92), rgba(15,23,42,0.98))`), borde de acento índigo y resplandor sutil (`box-shadow: 0 14px 40px rgba(0,0,0,0.45)`).
+- **Badge Dinámico de Recomendación**: Píldora con indicador de pulso verde esmeralda (`.pulse-dot`) y etiqueta `"🎯 SIGUIENTE MEJOR ACCIÓN RECOMENDADA"`.
+- **Botón Primario Gigantesco de Acción Directa (`#hubHeroActionBtn`)**:
+  - Altura mínima ergonómica de 68px (64px en móvil), bordes redondeados (16px) y gradiente hiper-contrastante (#4f46e5 a #06b6d4).
+  - Texto principal: `"▶ CONTINUAR MI LECCIÓN DEL DÍA"` o `"▶ CONTINUAR: [TÍTULO DE LECCIÓN]"`.
+  - Subtexto explicativo: `"Duración estimada: 5 min • +2 Créditos Académicos"`.
+  - Micro-animaciones: Efecto hover con elevación suave (`translateY(-2px)`), resplandor perimetral y rebote continuo sutil en el ícono de play.
+  - Al hacer clic, invoca de inmediato `startWarmupForLesson(nextL.id)`, activando el flujo sin navegación en menús profundos.
+
+### 26.2 Reorganización y Colapso de Métricas Secundarias
+- **Métricas Visibles en Dashboard**:
+  1. Saludo personalizado limpio: `"¡Hola, [Nombre]!"` con chip de nivel CEFR.
+  2. Tarjeta 1: Progreso de Créditos Académicos (ej. `0 / 36` y barra de avance al Examen de Suficiencia).
+  3. Tarjeta 2: Racha de días (`🔥 X días`), XP acumulado y tarjetas en SRS.
+- **Acordeón Desplegable de Diagnóstico CEFR (`#hubDiagnosisAccordion`)**:
+  - Oculta el radar y barras analíticas de Comprensión, Fluidez, Gramática y Vocabulario por defecto tras el botón interactivo `"#hubToggleDiagnosisBtn"` (`"📊 Ver Mi Diagnóstico Detallado (CEFR)"` con chevron `▼`/`▲`).
+  - Permite acceso rápido a los datos sin dispersar la atención visual en el momento de iniciar la sesión de estudio.
+
+### 26.3 Rediseño del Bottom Dock (Navegación Simplificada en 3 Bloques)
+- **3 Bloques Fundamentales**:
+  1. 🏠 **Aprender** (`tabNavHub` / `data-tab="hub"`): Conduce al Student Hub y árbol curricular modular de 36 créditos.
+  2. 🎙️ **Practicar** (`tabNavSpeak` / `data-tab="speak"`): Conduce al módulo de práctica oral.
+  3. 🧠 **Repasar** (`tabNavReview` / `data-tab="review"`): Conduce al mazo de repetición espaciada (SRS) y fonética.
+- **Selector de Modo de Práctica (`.practice-mode-nav`)**:
+  - Control de píldoras segmentadas ubicado en la cabecera de las vistas de práctica para alternar fluidamente entre `🎙️ Tutor Wetty (1 a 1)` y `👥 Salas Co-Op (Microgrupos)`.
+  - Mantiene iluminado el tab `"Practicar"` en el dock inferior tanto en práctica individual como grupal.
+- **Ocultamiento de Pestañas Secundarias**: Se retiraron del dock visible las pestañas `coop`, `tones` y `progress`, integrándolas de forma contextual para evitar dispersión cognitiva.
+- **Dock Adaptativo**: Presentación como dock flotante centrado en desktop (`max-width: 520px`) y barra fija con márgenes de seguridad en dispositivos móviles.
+
+### 26.4 Adaptabilidad Móvil y Verificación (DoD)
+- **Optimización Responsive (390px x 844px)**: Reglas `@media (max-width: 480px)` ajustando tipografías de 19px/14px, paddings táctiles de 12px y botones de ancho completo sin desbordamiento horizontal ni saltos de maquetación (Cumulative Layout Shift = 0).
+- **Pruebas Automatizadas**: **91 tests ejecutados, 90 aprobados, 0 fallos, 1 omitido por RLS remoto en vivo**.
+
+
 
 
 

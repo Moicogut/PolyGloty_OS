@@ -1420,6 +1420,15 @@ async function loadAndRenderHub() {
       if ($("#hubNextLessonModule")) $("#hubNextLessonModule").textContent = nextL.module;
       if ($("#hubNextLessonScene")) $("#hubNextLessonScene").textContent = nextL.scene;
 
+      // Hito Visual Principal: Botón Gigantesco de Acción Directa
+      const heroBtn = $("#hubHeroActionBtn");
+      if (heroBtn) {
+        heroBtn.onclick = () => startWarmupForLesson(nextL.id);
+      }
+      if ($("#hubHeroActionBtnText")) {
+        $("#hubHeroActionBtnText").textContent = `CONTINUAR: ${nextL.title.toUpperCase()}`;
+      }
+
       const startBtn = $("#hubStartLessonWarmupBtn");
       if (startBtn) {
         startBtn.onclick = () => startWarmupForLesson(nextL.id);
@@ -2333,14 +2342,28 @@ function switchTab(target) {
     if (mainBottomNav) mainBottomNav.style.display = "flex";
   }
 
-  // Actualizar pestañas activas en la barra inferior
+  // Actualizar pestañas activas en la barra inferior (3 bloques principales + mapeo)
   document.querySelectorAll(".bottom-nav button, .tabs button").forEach((x) => {
     const tabKey = x.dataset.tab;
-    const isSelected = (tabKey === t) || (tabKey === "hub" && t === "hubView");
+    const isSelected = (tabKey === t) ||
+      (tabKey === "hub" && (t === "hubView" || t === "hub")) ||
+      (tabKey === "speak" && (t === "speak" || t === "coop")) ||
+      (tabKey === "review" && (t === "review" || t === "tones"));
     x.setAttribute("aria-selected", isSelected ? "true" : "false");
     if (isSelected) x.classList.add("active");
     else x.classList.remove("active");
   });
+
+  // Sincronizar botones del selector de modo de práctica (1 a 1 vs Co-Op)
+  const tutorBtn = $("#practiceModeTutorBtn");
+  const coopBtn = $("#practiceModeCoopBtn");
+  if (t === "speak") {
+    if (tutorBtn) tutorBtn.classList.add("active");
+    if (coopBtn) coopBtn.classList.remove("active");
+  } else if (t === "coop") {
+    if (tutorBtn) tutorBtn.classList.remove("active");
+    if (coopBtn) coopBtn.classList.add("active");
+  }
 
   // Mostrar u ocultar secciones en main
   document.querySelectorAll("main section").forEach((s) => {
@@ -2885,6 +2908,35 @@ async function init() {
 
   $("#hubViewProgressBtn")?.addEventListener("click", () => {
     switchTab("progress");
+  });
+
+  // Acordeón de Diagnóstico Detallado CEFR
+  $("#hubToggleDiagnosisBtn")?.addEventListener("click", () => {
+    const acc = $("#hubDiagnosisAccordion");
+    const chev = $("#hubDiagnosisChevron");
+    const btn = $("#hubToggleDiagnosisBtn");
+    if (!acc) return;
+    const isHidden = (acc.style.display === "none" || !acc.style.display);
+    if (isHidden) {
+      acc.style.display = "block";
+      if (chev) chev.textContent = "▲";
+      btn?.classList.add("open");
+    } else {
+      acc.style.display = "none";
+      if (chev) chev.textContent = "▼";
+      btn?.classList.remove("open");
+    }
+  });
+
+  // Selector Rápido de Modo de Práctica: 1 a 1 vs Microgrupos Co-Op
+  $("#practiceModeTutorBtn")?.addEventListener("click", () => {
+    switchTab("speak");
+  });
+  $("#practiceModeCoopBtn")?.addEventListener("click", () => {
+    switchTab("coop");
+  });
+  $("#coopGoToTutorBtn")?.addEventListener("click", () => {
+    switchTab("speak");
   });
 
   // Botones del Modal de Pre-sesión Warm-up

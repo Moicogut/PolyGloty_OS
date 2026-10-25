@@ -131,7 +131,7 @@
 
   <!-- SECCIÓN 1: STUDENT HUB / DASHBOARD MOTIVACIONAL (USUARIO AUTENTICADO) -->
   <section id="hubView" class="student-hub-section" style="display: none;">
-    <!-- Banner de Bienvenida y Autoeficacia -->
+    <!-- Saludo personalizado limpio -->
     <div class="hub-welcome-banner">
       <div class="hub-welcome-left">
         <div class="hub-greeting-row">
@@ -143,14 +143,51 @@
         </p>
       </div>
       <div class="hub-welcome-actions">
-        <button id="hubGoToSpeakBtn" type="button" class="primary hub-talk-btn">
-          <span>🎙️</span> <span>Entrar al Tutor</span>
+        <button id="hubGoToSpeakBtn" type="button" class="dock-pill-btn hub-quick-speak-btn" title="Entrar a Práctica Libre con Wetty">
+          <span>🎙️</span> <span>Práctica Libre</span>
         </button>
       </div>
     </div>
 
-    <!-- Grid de Métricas Principales -->
-    <div class="hub-metrics-grid">
+    <!-- 1. HITO VISUAL PRINCIPAL: HERO ACTION CARD (SIGUIENTE MEJOR ACCIÓN) -->
+    <div class="hub-hero-action-card">
+      <div class="hero-action-header">
+        <div class="hero-action-badge">
+          <span class="pulse-dot"></span> 🎯 SIGUIENTE MEJOR ACCIÓN RECOMENDADA
+        </div>
+        <span class="hero-action-module-pill" id="hubNextLessonModule">Módulo 1: Primeros Contactos</span>
+      </div>
+      
+      <div class="hero-action-body">
+        <div class="hero-action-info">
+          <h2 class="hero-lesson-title" id="hubNextLessonTitle">Lección 1: En la Cafetería</h2>
+          <p class="hero-lesson-desc" id="hubNextLessonScene">
+            Eres un cliente en una cafetería. Pide tu bebida favorita, consulta el precio y da las gracias cordialmente.
+          </p>
+        </div>
+
+        <!-- Botón Primario Gigantesco de Acción Directa -->
+        <button id="hubHeroActionBtn" type="button" class="hub-hero-cta-btn">
+          <div class="cta-btn-main-row">
+            <span class="cta-play-icon">▶</span>
+            <span class="cta-btn-main-text" id="hubHeroActionBtnText">CONTINUAR MI LECCIÓN DEL DÍA</span>
+          </div>
+          <span class="cta-btn-subtext">Duración estimada: 5 min • +2 Créditos Académicos</span>
+        </button>
+      </div>
+
+      <div class="hero-action-footer">
+        <button id="hubOpenHandbookBtn" type="button" class="hero-subaction-btn">
+          <span>📖 Guía de Estudio (Handbook)</span>
+        </button>
+        <button id="hubStartLessonWarmupBtn" type="button" class="hero-subaction-btn" style="display: none;">
+          <span>⚡ Pre-sesión</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. MÉTRICAS ESENCIALES (SOLO CRÉDITOS Y RACHA) -->
+    <div class="hub-metrics-grid hub-metrics-compact">
       <!-- Tarjeta 1: Créditos y Nivel -->
       <div class="hub-metric-card">
         <div class="hub-card-header">
@@ -175,56 +212,47 @@
         </div>
         <small class="muted">La constancia diaria entrena la fluidez refleja.</small>
       </div>
-
-      <!-- Tarjeta 3: Radar de Competencias -->
-      <div class="hub-metric-card hub-radar-card">
-        <div class="hub-card-header">
-          <span>📊 Estado de Competencias (CEFR)</span>
-          <button id="hubViewProgressBtn" type="button" class="link-vocab-btn small">Ver detalles →</button>
-        </div>
-        <div class="hub-radar-bars">
-          <div class="radar-bar-item">
-            <span class="radar-label">Comprensión</span>
-            <div class="radar-track"><div id="radarCompFill" class="radar-fill" style="width: 70%;"></div></div>
-            <b id="radarCompVal">70%</b>
-          </div>
-          <div class="radar-bar-item">
-            <span class="radar-label">Fluidez</span>
-            <div class="radar-track"><div id="radarFluencyFill" class="radar-fill" style="width: 60%;"></div></div>
-            <b id="radarFluencyVal">60%</b>
-          </div>
-          <div class="radar-bar-item">
-            <span class="radar-label">Gramática</span>
-            <div class="radar-track"><div id="radarGrammarFill" class="radar-fill" style="width: 65%;"></div></div>
-            <b id="radarGrammarVal">65%</b>
-          </div>
-          <div class="radar-bar-item">
-            <span class="radar-label">Vocabulario</span>
-            <div class="radar-track"><div id="radarVocabFill" class="radar-fill" style="width: 70%;"></div></div>
-            <b id="radarVocabVal">70%</b>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- Próxima Lección Curricular en Foco -->
-    <div class="hub-lesson-focus-card">
-      <div class="focus-card-badge">🎯 PRÓXIMO HITO CURRICULAR (2 CRÉDITOS)</div>
-      <div class="focus-card-main">
-        <div class="focus-card-info">
-          <h3 id="hubNextLessonTitle">Lección 1: En la Cafetería</h3>
-          <p id="hubNextLessonModule" class="muted small">Módulo 1: Primeros Contactos</p>
-          <p id="hubNextLessonScene" class="focus-scene-desc">
-            Eres un cliente en una cafetería. Pide tu bebida favorita, consulta el precio y da las gracias cordialmente.
-          </p>
-        </div>
-        <div class="focus-card-action">
-          <button id="hubOpenHandbookBtn" type="button" class="dock-pill-btn" style="width: 100%; margin-bottom: 8px; justify-content: center;">
-            <span>📖 Guía Oficial de Estudio</span>
-          </button>
-          <button id="hubStartLessonWarmupBtn" type="button" class="primary start-warmup-btn">
-            <span>⚡ Iniciar Pre-sesión y Lección →</span>
-          </button>
+    <!-- ACORDEÓN DESPLEGABLE: DIAGNÓSTICO DETALLADO CEFR (EVITA SOBRECARGA VISUAL) -->
+    <div class="hub-diagnosis-wrapper">
+      <button id="hubToggleDiagnosisBtn" type="button" class="hub-diagnosis-toggle-btn">
+        <span class="diagnosis-toggle-left">
+          <span>📊</span>
+          <span>Ver Mi Diagnóstico Detallado (CEFR)</span>
+        </span>
+        <span id="hubDiagnosisChevron" class="toggle-chevron">▼</span>
+      </button>
+
+      <div id="hubDiagnosisAccordion" class="hub-diagnosis-accordion" style="display: none;">
+        <div class="diagnosis-accordion-inner">
+          <div class="hub-radar-bars">
+            <div class="radar-bar-item">
+              <span class="radar-label">Comprensión</span>
+              <div class="radar-track"><div id="radarCompFill" class="radar-fill" style="width: 70%;"></div></div>
+              <b id="radarCompVal">70%</b>
+            </div>
+            <div class="radar-bar-item">
+              <span class="radar-label">Fluidez</span>
+              <div class="radar-track"><div id="radarFluencyFill" class="radar-fill" style="width: 60%;"></div></div>
+              <b id="radarFluencyVal">60%</b>
+            </div>
+            <div class="radar-bar-item">
+              <span class="radar-label">Gramática</span>
+              <div class="radar-track"><div id="radarGrammarFill" class="radar-fill" style="width: 65%;"></div></div>
+              <b id="radarGrammarVal">65%</b>
+            </div>
+            <div class="radar-bar-item">
+              <span class="radar-label">Vocabulario</span>
+              <div class="radar-track"><div id="radarVocabFill" class="radar-fill" style="width: 70%;"></div></div>
+              <b id="radarVocabVal">70%</b>
+            </div>
+          </div>
+          <div class="diagnosis-accordion-footer">
+            <button id="hubViewProgressBtn" type="button" class="link-vocab-btn small">
+              Ver reporte histórico completo de competencias →
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -302,6 +330,16 @@
 
   <!-- TAB 1: HABLAR (ESTILO PRAKTIKA CON TUTOR AVATAR) -->
   <section id="speak" class="panel panel-speak">
+    <!-- Selector Rápido de Práctica: 1 a 1 vs Grupos Co-Op -->
+    <div class="practice-mode-nav">
+      <button type="button" class="practice-mode-btn active" id="practiceModeTutorBtn">
+        <span>🎙️ Tutor Wetty (1 a 1)</span>
+      </button>
+      <button type="button" class="practice-mode-btn" id="practiceModeCoopBtn">
+        <span>👥 Salas Co-Op (Microgrupos)</span>
+      </button>
+    </div>
+
     <!-- Header compacto del Tutor estilo Praktika -->
     <div class="tutor-hero">
       <div class="tutor-header-left">
@@ -537,6 +575,16 @@
 
   <!-- TAB 5: SALAS CO-OP DE MICROGRUPOS (FASE II) -->
   <section id="coop" class="panel panel-coop" hidden>
+    <!-- Selector Rápido de Práctica: 1 a 1 vs Grupos Co-Op -->
+    <div class="practice-mode-nav" style="margin-bottom: 16px;">
+      <button type="button" class="practice-mode-btn" id="coopGoToTutorBtn">
+        <span>🎙️ Tutor Wetty (1 a 1)</span>
+      </button>
+      <button type="button" class="practice-mode-btn active">
+        <span>👥 Salas Co-Op (Microgrupos)</span>
+      </button>
+    </div>
+
     <!-- 1. Vista de Búsqueda / Matchmaking -->
     <div id="coopMatchView" class="coop-room-card">
       <div class="coop-header-row">
@@ -1317,29 +1365,31 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<!-- BARRA DE NAVEGACIÓN INFERIOR (Estilo App Nativa Praktika) -->
-<nav class="bottom-nav" id="mainBottomNav" role="tablist">
+<!-- BARRA DE NAVEGACIÓN INFERIOR (3 BLOQUES FUNDAMENTALES: APRENDER, PRACTICAR, REPASAR) -->
+<nav class="bottom-nav bottom-nav-simplified" id="mainBottomNav" role="tablist">
   <button role="tab" data-tab="hub" aria-selected="true" class="bottom-nav-item active" id="tabNavHub">
     <span class="nav-icon">🏠</span>
-    <span class="nav-label">Hub</span>
+    <span class="nav-label">Aprender</span>
   </button>
   <button role="tab" data-tab="speak" aria-selected="false" class="bottom-nav-item" id="tabNavSpeak">
     <span class="nav-icon">🎙️</span>
-    <span class="nav-label">Tutor</span>
+    <span class="nav-label">Practicar</span>
   </button>
-  <button role="tab" data-tab="coop" aria-selected="false" class="bottom-nav-item" id="tabNavCoop">
+  <button role="tab" data-tab="review" aria-selected="false" class="bottom-nav-item" id="tabNavReview">
+    <span class="nav-icon">🧠</span>
+    <span class="nav-label">Repasar</span>
+  </button>
+
+  <!-- Pestañas secundarias / avanzadas (ocultas en la barra para evitar dispersión cognitiva) -->
+  <button role="tab" data-tab="coop" aria-selected="false" class="bottom-nav-item nav-item-secondary" id="tabNavCoop" style="display: none;">
     <span class="nav-icon">👥</span>
     <span class="nav-label">Co-Op</span>
   </button>
-  <button role="tab" data-tab="tones" aria-selected="false" class="bottom-nav-item">
+  <button role="tab" data-tab="tones" aria-selected="false" class="bottom-nav-item nav-item-secondary" id="tabNavTones" style="display: none;">
     <span class="nav-icon">🎵</span>
     <span class="nav-label">Tonos</span>
   </button>
-  <button role="tab" data-tab="review" aria-selected="false" class="bottom-nav-item">
-    <span class="nav-icon">🧠</span>
-    <span class="nav-label">Repaso</span>
-  </button>
-  <button role="tab" data-tab="progress" aria-selected="false" class="bottom-nav-item">
+  <button role="tab" data-tab="progress" aria-selected="false" class="bottom-nav-item nav-item-secondary" id="tabNavProgress" style="display: none;">
     <span class="nav-icon">🏆</span>
     <span class="nav-label">Progreso</span>
   </button>
