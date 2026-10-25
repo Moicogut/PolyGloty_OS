@@ -59,6 +59,42 @@ let isConnected = false;
 let currentSynthUtterance = null;
 let tStop = 0;
 
+// ==========================================================================
+// SELECTOR DE ESCENARIOS DINÁMICOS (SOLUCIÓN 5: CONTEXTOS FLEXIBLES Y VIVOS)
+// ==========================================================================
+const SCENARIO_LABELS = {
+  casual: "☕ Vida Cotidiana",
+  tech: "💻 Tech Standup",
+  corporate: "💼 Business & Sales",
+  medical: "🏥 Clinical & Care",
+};
+
+let currentScenario = store.get("polyglot_scenario", "casual");
+
+function selectScenario(scenarioId, notify = false) {
+  if (!SCENARIO_LABELS[scenarioId]) scenarioId = "casual";
+  currentScenario = scenarioId;
+  store.set("polyglot_scenario", scenarioId);
+
+  document.querySelectorAll(".scenario-card").forEach((card) => {
+    const isSelected = card.dataset.scenario === scenarioId;
+    card.classList.toggle("active", isSelected);
+    card.setAttribute("aria-checked", isSelected ? "true" : "false");
+  });
+
+  const activeBadge = $("#activeScenarioLabel");
+  if (activeBadge) {
+    activeBadge.textContent = SCENARIO_LABELS[scenarioId] || "☕ Vida Cotidiana";
+  }
+
+  if (notify) {
+    toast(`🎯 Enfoque cambiado a: ${SCENARIO_LABELS[scenarioId]}`);
+    if (isConnected) {
+      status(`Contexto activo: ${SCENARIO_LABELS[scenarioId]}. Wetty adaptará sus próximas réplicas.`);
+    }
+  }
+}
+
 function paint() {
   const meterEl = $(".meter");
   if (meterEl) {
@@ -573,6 +609,9 @@ async function sendTurnToTutor(userText, sttDurationMs = 0) {
       lang: lang(),
       level: $("#level").value,
       mission: $("#mission").value,
+      scenario: currentScenario,
+      userName: currentUser?.name || currentUser?.email?.split("@")[0] || "",
+      domain: currentUser?.domain || "general",
       sttMs: Math.round(sttDurationMs),
     });
 
@@ -786,7 +825,16 @@ async function connect() {
   status("Conectando con el tutor…");
 
   try {
-    const q = new URLSearchParams({ lang: lang(), level: $("#level").value, mission: $("#mission").value });
+    const studentName = currentUser?.name || currentUser?.email?.split("@")[0] || "";
+    const studentDomain = currentUser?.domain || "general";
+    const q = new URLSearchParams({
+      lang: lang(),
+      level: $("#level").value,
+      mission: $("#mission").value,
+      scenario: currentScenario,
+      userName: studentName,
+      domain: studentDomain,
+    });
     const sess = await api(`/api/session?${q}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
 
     isConnected = true;
@@ -2938,6 +2986,15 @@ async function init() {
   $("#coopGoToTutorBtn")?.addEventListener("click", () => {
     switchTab("speak");
   });
+
+  // Selector de Escenarios Dinámicos (Solución 5)
+  document.querySelectorAll(".scenario-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const sc = card.dataset.scenario;
+      if (sc) selectScenario(sc, true);
+    });
+  });
+  selectScenario(currentScenario, false);
 
   // Botones del Modal de Pre-sesión Warm-up
   $("#closeWarmupModal")?.addEventListener("click", () => {

@@ -340,6 +340,47 @@
       </button>
     </div>
 
+    <!-- Selector de Escenarios Dinámicos (Solución 5: Bienvenida Contextual y Dinámica) -->
+    <div class="scenario-selector-container">
+      <div class="scenario-selector-header">
+        <div class="scenario-header-left">
+          <span class="scenario-pulse-indicator"></span>
+          <span class="scenario-badge-label">ENFOQUE DE LA SESIÓN</span>
+        </div>
+        <span class="scenario-active-badge" id="activeScenarioLabel">☕ Vida Cotidiana</span>
+      </div>
+      <div class="scenario-selector-cards" id="scenarioSelectorCards" role="radiogroup" aria-label="Selector de escenario de conversación">
+        <button type="button" class="scenario-card active" data-scenario="casual" role="radio" aria-checked="true">
+          <span class="scenario-card-icon">☕</span>
+          <div class="scenario-card-content">
+            <span class="scenario-card-title">Vida Cotidiana</span>
+            <span class="scenario-card-desc">Café, viajes, compras y anécdotas</span>
+          </div>
+        </button>
+        <button type="button" class="scenario-card" data-scenario="tech" role="radio" aria-checked="false">
+          <span class="scenario-card-icon">💻</span>
+          <div class="scenario-card-content">
+            <span class="scenario-card-title">Tech Standup</span>
+            <span class="scenario-card-desc">Daily scrum, code review y bugs</span>
+          </div>
+        </button>
+        <button type="button" class="scenario-card" data-scenario="corporate" role="radio" aria-checked="false">
+          <span class="scenario-card-icon">💼</span>
+          <div class="scenario-card-content">
+            <span class="scenario-card-title">Business & Sales</span>
+            <span class="scenario-card-desc">Negociaciones y llamadas</span>
+          </div>
+        </button>
+        <button type="button" class="scenario-card" data-scenario="medical" role="radio" aria-checked="false">
+          <span class="scenario-card-icon">🏥</span>
+          <div class="scenario-card-content">
+            <span class="scenario-card-title">Clinical & Care</span>
+            <span class="scenario-card-desc">Triaje médico y consulta</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
     <!-- Header compacto del Tutor estilo Praktika -->
     <div class="tutor-hero">
       <div class="tutor-header-left">

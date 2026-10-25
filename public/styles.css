@@ -152,6 +152,35 @@
   border-color: #e2e8f0;
 }
 
+[data-theme="light"] .scenario-selector-container {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .scenario-card {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+[data-theme="light"] .scenario-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .scenario-card.active {
+  background: linear-gradient(135deg, #e0e7ff 0%, #e0f2fe 100%);
+  border-color: #6366f1;
+}
+
+[data-theme="light"] .scenario-card.active .scenario-card-title {
+  color: #1e1b4b;
+}
+
+[data-theme="light"] .scenario-card.active .scenario-card-desc {
+  color: #475569;
+}
+
 [data-theme="light"] .conversation-dock {
   background: rgba(255, 255, 255, 0.95);
   border-color: #cbd5e1;
@@ -3126,8 +3155,172 @@ button.danger:hover:not(:disabled) {
   box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
 }
 
+/* ==========================================================================
+   4. SELECTOR DE ESCENARIOS DINÁMICOS (SOLUCIÓN 5: CONTEXTOS FLEXIBLES Y VIVOS)
+   ========================================================================== */
+.scenario-selector-container {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.65) 0%, rgba(15, 23, 42, 0.75) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.25s ease;
+}
+
+.scenario-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.scenario-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scenario-pulse-indicator {
+  width: 7px;
+  height: 7px;
+  background-color: var(--secondary);
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px var(--secondary);
+}
+
+.scenario-badge-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.scenario-active-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+.scenario-selector-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .scenario-selector-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.scenario-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.scenario-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(99, 102, 241, 0.35);
+  transform: translateY(-2px);
+}
+
+.scenario-card:active {
+  transform: translateY(0);
+}
+
+.scenario-card.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(6, 182, 212, 0.15) 100%);
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25), 0 0 0 1px rgba(99, 102, 241, 0.3) inset;
+}
+
+.scenario-card-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.scenario-card.active .scenario-card-icon {
+  transform: scale(1.12);
+}
+
+.scenario-card-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.scenario-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scenario-card-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.scenario-card.active .scenario-card-title {
+  color: #ffffff;
+}
+
+.scenario-card.active .scenario-card-desc {
+  color: #cbd5e1;
+}
+
 /* Ajustes Responsive para Pantallas Móviles (390px x 844px) */
 @media (max-width: 480px) {
+  .scenario-selector-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .scenario-card {
+    padding: 8px 12px;
+  }
+
+  .scenario-card-icon {
+    font-size: 20px;
+  }
+
+  .scenario-card-title {
+    font-size: 12.5px;
+  }
+
+  .scenario-card-desc {
+    font-size: 10.5px;
+  }
+
   .hub-hero-action-card {
     padding: 18px 16px;
     border-radius: var(--radius-md);

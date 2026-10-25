@@ -61,6 +61,8 @@ import {
   repairAndGuaranteePedagogicalResponse,
   MISSION_CATALOG,
   LESSON_CURRICULUM,
+  generateAdaptiveOpening,
+  DYNAMIC_SCENARIOS,
 } from "./lib/pedagogicalAgent.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -678,16 +680,31 @@ const routes = {
       const langCode = lang(url.searchParams.get("lang"));
       const levelCode = url.searchParams.get("level") || "A1";
       const missionId = url.searchParams.get("mission") || "libre";
+      const scenarioId = url.searchParams.get("scenario") || "casual";
+      const userName = url.searchParams.get("userName") || state.data?.profile?.full_name || state.data?.profile?.name || "";
+      const userDomain = url.searchParams.get("domain") || "general";
+
       const baseMission = MISSIONS.find((x) => x.id === missionId) || MISSIONS[0];
       const adapted = adaptMissionForLevel(baseMission, levelCode, langCode);
+      const adaptiveOpening = generateAdaptiveOpening({
+        lang: langCode,
+        level: levelCode,
+        userName,
+        scenarioId,
+      });
+
       const systemInstruction = buildPedagogicalSystemInstruction({
         lang: langCode,
         level: levelCode,
         mission: adapted,
         state: state.data,
         recentErrors: state.data.errors || [],
+        userName,
+        userDomain,
+        scenario: scenarioId,
+        turnIndex: 0,
       });
-      logger.info("gemini_session_created", { latencyMs: Date.now() - start, model: GEMINI_MODEL }, state.tenantId);
+      logger.info("gemini_session_created", { latencyMs: Date.now() - start, model: GEMINI_MODEL, scenario: scenarioId }, state.tenantId);
       return send(res, 200, {
         provider: "gemini",
         model: GEMINI_MODEL,
@@ -695,7 +712,8 @@ const routes = {
         lang: langCode,
         level: levelCode,
         mission: adapted,
-        opening: adapted.opening,
+        scenario: scenarioId,
+        opening: adaptiveOpening || adapted.opening,
       });
     }
 
@@ -779,7 +797,11 @@ const routes = {
 
     const langCode = lang(b.lang);
     const levelCode = b.level || "A1";
-    const baseMission = MISSIONS.find((x) => x.id === b.mission) || MISSIONS[0];
+    const missionId = b.mission || "libre";
+    const scenarioId = b.scenario || "casual";
+    const userName = b.userName || state.data?.profile?.full_name || state.data?.profile?.name || "";
+    const userDomain = b.domain || "general";
+    const baseMission = MISSIONS.find((x) => x.id === missionId) || MISSIONS[0];
     const adapted = adaptMissionForLevel(baseMission, levelCode, langCode);
 
     let geminiContents = b.messages.map((m) => {
@@ -790,12 +812,18 @@ const routes = {
       };
     });
 
+    const turnIndex = geminiContents.filter((m) => m.role === "user").length;
+
     const systemInstruction = buildPedagogicalSystemInstruction({
       lang: langCode,
       level: levelCode,
       mission: adapted,
       state: state.data,
       recentErrors: state.data.errors || [],
+      userName,
+      userDomain,
+      scenario: scenarioId,
+      turnIndex,
     });
 
     const candidateModels = Array.from(new Set([

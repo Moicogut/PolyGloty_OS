@@ -703,6 +703,49 @@ Para erradicar la sobrecarga cognitiva al iniciar sesión y guiar al estudiante 
 - **Optimización Responsive (390px x 844px)**: Reglas `@media (max-width: 480px)` ajustando tipografías de 19px/14px, paddings táctiles de 12px y botones de ancho completo sin desbordamiento horizontal ni saltos de maquetación (Cumulative Layout Shift = 0).
 - **Pruebas Automatizadas**: **91 tests ejecutados, 90 aprobados, 0 fallos, 1 omitido por RLS remoto en vivo**.
 
+---
+
+## 27. Solución 5: Bienvenida Contextual y Selector de Escenarios Dinámicos (UX Conversacional)
+
+Para erradicar la rigidez de los escenarios monolíticos al iniciar sesión con Wetty y brindar una experiencia conversacional flexible, viva y personalizada, se implementó una arquitectura de contextos dinámicos y saludo adaptativo en backend (`lib/pedagogicalAgent.js`, `server.js`) y cliente (`public/index.html`, `public/app.js`, `public/styles.css`).
+
+### 27.1 Saludo Adaptativo y Turno 0 Empático (`lib/pedagogicalAgent.js`)
+- **Generador de Apertura Adaptativa (`generateAdaptiveOpening`)**:
+  - Saluda al estudiante por su nombre propio (`userName`) reconociendo su progreso específico de nivel CEFR (`level`).
+  - Introduce un chequeo de estado o charla casual de baja presión (*Low-Pressure State Check*) antes de iniciar la demanda formal del currículum.
+  - Genera réplica nativa en idioma meta y traducción fiel sin prefijos técnicos.
+- **Catálogo de Escenarios Dinámicos (`DYNAMIC_SCENARIOS`)**:
+  1. ☕ **Vida Cotidiana & Charlas Casuales (`casual`)**: Cafeterías, viajes, comida, hobbies y anécdotas personales.
+  2. 💻 **Tech & Product Standup (`tech`)**: Daily scrum, pull requests, bugs y despliegue ágil.
+  3. 💼 **Corporate & Business (`corporate`)**: Negociaciones, llamadas ejecutivas y presentaciones.
+  4. 🏥 **Clinical & Triage (`medical`)**: Triaje sanitario, anamnesis y comunicación con pacientes.
+- **Directivas en `buildPedagogicalSystemInstruction`**:
+  - Inyección de nombre, nivel, dominio profesional e instrucciones situacionales del escenario seleccionado en el System Prompt de Gemini.
+  - Regulación pedagógica para el primer turno de interacción (Turno 0).
+
+### 27.2 Integración en Backend (`server.js`)
+- **`GET /api/session`**:
+  - Parámetros de consulta enriquecidos: `userName`, `domain`, `scenario`.
+  - Retorna `opening` contextualizado con la apertura adaptativa personalizada para alimentar el primer mensaje de voz y texto.
+- **`POST /api/chat`**:
+  - Recibe `scenario`, `userName` y `domain` en el cuerpo de la petición.
+  - Inyecta la directriz de escenario dinámico en cada turno del modelo para mantener la coherencia temática viva sin encasillar al estudiante.
+
+### 27.3 Selector Dinámico en el Cliente (`public/index.html`, `public/app.js`, `public/styles.css`)
+- **Componente `.scenario-selector-container`**:
+  - Barra de 4 tarjetas interactivas (`.scenario-card`) con selector rápido y badge de escenario activo (`#activeScenarioLabel`).
+  - Persistencia de preferencia en LocalStorage (`polyglot_scenario`).
+  - Notificación no invasiva vía `toast` y actualización de estado cuando el usuario conmuta el enfoque temático.
+- **Transición Fluida y Estética**:
+  - Transición instantánea (<50ms) entre el Student Hub (Solución 2) y la cabina del Tutor.
+  - Estilo Obsidian con bordes luminosos, micro-animaciones al cursor y compatibilidad completa con Dark Mode y Light Mode.
+  - Adaptabilidad para smartphones (`grid-template-columns: 1fr` en pantallas de 390px x 844px).
+
+### 27.4 Verificación y DoD
+- **Suite de Pruebas**: Nuevos tests unitarios añadidos en `test/pedagogical.test.js` para `generateAdaptiveOpening` y `buildPedagogicalSystemInstruction`.
+- **Resultados de `npm test`**: **93 tests ejecutados, 92 aprobados, 0 fallos, 1 omitido por RLS remoto en vivo**. Latencia media en 1474 ms.
+
+
 
 
 

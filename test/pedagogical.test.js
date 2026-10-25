@@ -5,7 +5,9 @@ import {
   LEVEL_RULES,
   buildPedagogicalSystemInstruction,
   repairAndGuaranteePedagogicalResponse,
-  GEMINI_PEDAGOGICAL_SCHEMA
+  GEMINI_PEDAGOGICAL_SCHEMA,
+  generateAdaptiveOpening,
+  DYNAMIC_SCENARIOS,
 } from "../lib/pedagogicalAgent.js";
 
 test("adaptMissionForLevel adapta la misión cliente para A1 sin sobrecarga cognitiva", () => {
@@ -173,4 +175,47 @@ test("LESSON_CURRICULUM define una secuencia pedagógica progresiva por niveles"
   assert.ok(LESSON_CURRICULUM.en.A1[0].module, "Debe pertenecer a un módulo pedagógico");
   assert.ok(LESSON_CURRICULUM.en.A1[1].order > LESSON_CURRICULUM.en.A1[0].order);
   assert.ok(LESSON_CURRICULUM.en.B1.length >= 4, "B1 debe tener lecciones definidas");
+});
+
+test("Solución 5: generateAdaptiveOpening produce bienvenida empática personalizada por nivel y escenario", () => {
+  const opCasual = generateAdaptiveOpening({ lang: "en", level: "A1", userName: "Rolando", scenarioId: "casual" });
+  assert.equal(opCasual.scenarioId, "casual");
+  assert.match(opCasual.greeting, /Hello Rolando!/i);
+  assert.match(opCasual.greeting, /A1/);
+  assert.match(opCasual.greeting, /How is your day going/i);
+  assert.match(opCasual.translation, /¡Hola, Rolando!/i);
+
+  const opTech = generateAdaptiveOpening({ lang: "en", level: "B1", userName: "Alex Developer", scenarioId: "tech" });
+  assert.equal(opTech.scenarioId, "tech");
+  assert.match(opTech.greeting, /Hey Alex!/i);
+  assert.match(opTech.greeting, /daily standup/i);
+  assert.match(opTech.translation, /daily standup/i);
+
+  const opCorp = generateAdaptiveOpening({ lang: "en", level: "B2", userName: "Carlos", scenarioId: "corporate" });
+  assert.equal(opCorp.scenarioId, "corporate");
+  assert.match(opCorp.greeting, /Good day Carlos!/i);
+  assert.match(opCorp.greeting, /business scenario/i);
+
+  const opMed = generateAdaptiveOpening({ lang: "en", level: "A2", userName: "Dra. Sofía", scenarioId: "medical" });
+  assert.equal(opMed.scenarioId, "medical");
+  assert.match(opMed.greeting, /triage simulation/i);
+});
+
+test("Solución 5: buildPedagogicalSystemInstruction incluye directrices de escenario dinámico y Turno 0 empático", () => {
+  const instr = buildPedagogicalSystemInstruction({
+    lang: "en",
+    level: "A1",
+    mission: { id: "libre", title: "Práctica Libre", scene: "Charla abierta.", objectives: [] },
+    userName: "Rolando",
+    userDomain: "tech",
+    scenario: "tech",
+    turnIndex: 0,
+  });
+
+  assert.match(instr, /Rolando/);
+  assert.match(instr, /tech/);
+  assert.match(instr, /ENFOQUE DE ESCENARIO DINÁMICO/i);
+  assert.match(instr, /Tech & Product Standup/i);
+  assert.match(instr, /TURNO 0: BIENVENIDA EMPÁTICA/i);
+  assert.match(instr, /LOW-PRESSURE WARMUP/i);
 });
