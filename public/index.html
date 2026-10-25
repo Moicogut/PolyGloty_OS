@@ -176,12 +176,11 @@
         </button>
       </div>
 
-      <div class="hero-action-footer">
         <button id="hubOpenHandbookBtn" type="button" class="hero-subaction-btn">
           <span>📖 Guía de Estudio (Handbook)</span>
         </button>
-        <button id="hubStartLessonWarmupBtn" type="button" class="hero-subaction-btn" style="display: none;">
-          <span>⚡ Pre-sesión</span>
+        <button id="hubStartLessonWarmupBtn" type="button" class="hero-subaction-btn">
+          <span>⚡ Calentamiento (Opcional)</span>
         </button>
       </div>
     </div>
@@ -1000,9 +999,12 @@
       </button>
     </div>
 
-    <div class="warmup-actions-footer" id="warmupActionsFooter">
+    <div class="warmup-actions-footer" id="warmupActionsFooter" style="display: flex; gap: 8px; flex-direction: column;">
       <button id="warmupNextBtn" type="button" class="primary" disabled style="width: 100%; padding: 12px; font-size: 14px; border-radius: var(--radius-full);">
         <span>Continuar →</span>
+      </button>
+      <button id="warmupSkipDirectBtn" type="button" class="btn-ghost" style="width: 100%; padding: 8px; font-size: 13px; color: var(--text-muted); cursor: pointer; text-decoration: underline; background: transparent; border: none;">
+        <span>Saltar e Iniciar Lección Directamente 🎙️</span>
       </button>
     </div>
   </div>
@@ -1071,7 +1073,7 @@
 
     <div class="handbook-modal-footer">
       <button id="handbookStartWarmupBtn" type="button" class="primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 700; border-radius: var(--radius-full);">
-        <span>⚡ Iniciar Pre-sesión y Lección →</span>
+        <span>🎙️ Iniciar Lección con Wetty →</span>
       </button>
     </div>
   </div>

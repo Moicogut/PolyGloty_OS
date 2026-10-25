@@ -745,6 +745,36 @@ Para erradicar la rigidez de los escenarios monolíticos al iniciar sesión con 
 - **Suite de Pruebas**: Nuevos tests unitarios añadidos en `test/pedagogical.test.js` para `generateAdaptiveOpening` y `buildPedagogicalSystemInstruction`.
 - **Resultados de `npm test`**: **93 tests ejecutados, 92 aprobados, 0 fallos, 1 omitido por RLS remoto en vivo**. Latencia media en 1474 ms.
 
+---
+
+## 28. Corrección Crítica de UX: Inicio Directo de Lección y Desacoplamiento de Warm-up Modal
+
+### 28.1 Causa Raíz Diagnosticada
+- **Comportamiento Anómalo**: Al presionar el botón primario de acción en el Hero Card del Student Hub (`#hubHeroActionBtn`: *"CONTINUAR: LECCIÓN 1: EN LA CAFETERÍA"*), la interfaz abría obligatoriamente el modal interactivo `#warmupModal` ("⚡ Warm-up Booster (Paso 1 de 3)"), bloqueando la lección tras un cuestionario de opción múltiple.
+- **Error en Transición Final**: Al finalizar las preguntas del cuestionario y presionar `#warmupEnterLessonBtn`, el manejador ejecutaba la llamada inexistente `onMissionChange()`, arrojando una excepción `ReferenceError: onMissionChange is not defined`, impidiendo que `switchTab("speak")` y `connect()` se ejecutaran jamás.
+- **Fricción Cognitiva**: El usuario esperaba una conexión conversacional inmediata con la tutora IA Wetty (< 3s), no un examen escrito previo.
+
+### 28.2 Solución Implementada (`public/app.js`, `public/index.html`)
+1. **Función Centralizada `startLessonDirectly(lessonId)`**:
+   - Cierra cualquier modal abierto (`#warmupModal`, `#handbookModal`).
+   - Si existía una llamada en curso, realiza un `hangup()` limpio.
+   - Sincroniza el selector `#mission` con la lección seleccionada (`lessonId`), actualiza la clave en store, limpia objetivos previos y renderiza los nuevos objetivos curriculares.
+   - Conmuta la vista a `#speak` mediante `switchTab("speak")`.
+   - Lanza `connect()` automáticamente tras un breve delay (350 ms) para establecer la sesión de audio/texto con Wetty de inmediato.
+2. **Re-cableado del Botón Primario (`#hubHeroActionBtn`)**:
+   - Enlaza directamente a `startLessonDirectly(nextL.id)`. El usuario entra directamente a hablar con Wetty en un solo clic.
+3. **Desacoplamiento y Visibilidad de Warm-up Opcional**:
+   - Se habilitó `#hubStartLessonWarmupBtn` en la cabecera del Hub como acción secundaria opcional (`⚡ Calentamiento (Opcional)`), permitiendo al alumno tomar el micro-cuestionario únicamente si lo desea.
+4. **Mecanismo de Salida en Modal Warm-up (`#warmupSkipDirectBtn`)**:
+   - Se añadió un botón explícito de salto en el pie de `#warmupModal`: *"Saltar e Iniciar Lección Directamente 🎙️"*.
+   - El botón final `#warmupEnterLessonBtn` ahora invoca de forma segura `startLessonDirectly(currentWarmupLessonId)`, eliminando la referencia rota.
+5. **Acción Directa en Árbol Curricular y Handbook**:
+   - Los botones *"Practicar"* de las lecciones en el Árbol Curricular modular y el botón de acción en el Handbook (`#handbookStartWarmupBtn`) ahora inician directamente la lección con Wetty sin bloqueos.
+
+### 28.3 Verificación y DoD
+- **Suite de Pruebas**: **93 tests ejecutados, 92 aprobados, 0 fallos, 1 omitido por RLS en vivo**.
+- **Flujo E2E Verificado**: Botón Hero -> `startLessonDirectly` -> vista `#speak` activa -> `connect()` ejecutado sin excepciones en consola.
+
 
 
 

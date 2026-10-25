@@ -1471,7 +1471,7 @@ async function loadAndRenderHub() {
       // Hito Visual Principal: Botón Gigantesco de Acción Directa
       const heroBtn = $("#hubHeroActionBtn");
       if (heroBtn) {
-        heroBtn.onclick = () => startWarmupForLesson(nextL.id);
+        heroBtn.onclick = () => startLessonDirectly(nextL.id);
       }
       if ($("#hubHeroActionBtnText")) {
         $("#hubHeroActionBtnText").textContent = `CONTINUAR: ${nextL.title.toUpperCase()}`;
@@ -1569,7 +1569,7 @@ async function loadAndRenderCurriculumTree() {
         });
 
         item.querySelector(".lesson-play-btn")?.addEventListener("click", () => {
-          startWarmupForLesson(l.id);
+          startLessonDirectly(l.id);
         });
 
         lessonsList.appendChild(item);
@@ -1712,6 +1712,43 @@ function switchHandbookTab(targetTab) {
   Object.entries(panels).forEach(([key, panel]) => {
     if (panel) panel.hidden = (key !== targetTab);
   });
+}
+
+function startLessonDirectly(lessonId) {
+  const warmupModal = $("#warmupModal");
+  if (warmupModal) warmupModal.hidden = true;
+  const handbookModal = $("#handbookModal");
+  if (handbookModal) handbookModal.hidden = true;
+
+  if (isConnected) {
+    hangup();
+  }
+
+  const targetId = lessonId || "cafe";
+  const missionSel = $("#mission");
+  if (missionSel) {
+    let found = false;
+    for (let i = 0; i < missionSel.options.length; i++) {
+      if (missionSel.options[i].value === targetId) {
+        missionSel.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      missionSel.value = targetId;
+    }
+    store.set("mission", missionSel.value);
+    done.clear();
+    renderObjectives();
+  }
+
+  switchTab("speak");
+  toast("🎙️ ¡Iniciando sesión conversacional con Wetty!");
+
+  setTimeout(() => {
+    connect();
+  }, 350);
 }
 
 async function startWarmupForLesson(lessonId) {
@@ -3005,18 +3042,11 @@ async function init() {
   $("#warmupNextBtn")?.addEventListener("click", onWarmupNextClick);
 
   $("#warmupEnterLessonBtn")?.addEventListener("click", () => {
-    const modal = $("#warmupModal");
-    if (modal) modal.hidden = true;
-    const missionSel = $("#mission");
-    if (missionSel && currentWarmupLessonId) {
-      missionSel.value = currentWarmupLessonId;
-      onMissionChange();
-    }
-    switchTab("speak");
-    toast("🎙️ ¡Iniciando sesión conversacional con Wetty!");
-    setTimeout(() => {
-      connect();
-    }, 400);
+    startLessonDirectly(currentWarmupLessonId);
+  });
+
+  $("#warmupSkipDirectBtn")?.addEventListener("click", () => {
+    startLessonDirectly(currentWarmupLessonId);
   });
 
   // Eventos del Modal de la Guía Oficial (Handbook)
@@ -3034,9 +3064,7 @@ async function init() {
   });
 
   $("#handbookStartWarmupBtn")?.addEventListener("click", () => {
-    const modal = $("#handbookModal");
-    if (modal) modal.hidden = true;
-    startWarmupForLesson(currentHandbookLessonId);
+    startLessonDirectly(currentHandbookLessonId);
   });
 
   $("#hubRefreshTreeBtn")?.addEventListener("click", () => {
